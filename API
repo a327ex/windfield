@@ -1,0 +1,67 @@
+This will be a box2d wrapper library for LÖVE
+The main goal is to make working with box2d in a LÖVE project easier and to make it require less setup steps
+A lot of the funcionality is already implemented in fuccboiGDX here http://fuccboi.moe/documentation/collision/ and here http://fuccboi.moe/documentation/physicsbody/
+I'm just taking that and disentangling it from the engine
+
+-- Basic usage
+hx = require 'hxdx'
+
+function love.load()
+    physics_world = hx.newWorld(params)
+end
+
+function love.update(dt)
+    physics_world:update(dt)
+end
+
+function love.draw()
+    physics_world:draw()
+end
+
+-- Collider 
+function Player:init()
+    self.collider = hx.newCollider(params)
+end
+
+function Player:update(dt)
+    self.collider:update(dt)
+
+    if self.collider:enter('some tag') then
+        print("entered collision with object of type 'some tag'")
+    end
+    if self.collider:exit('some tag') then
+        print("exited collision with object of type 'some tag'")
+    end
+end
+
+-- Collision classes
+physics_world:addCollisionClass('Player', ignores = {'NPC', 'Enemy'}})
+collider = hx.newCollider({collision_class = 'Player'})
+This means this collider is of collision_class 'Player' and will ignore colliders of collision_class 'NPC' and 'Enemy'
+So whenever this collider collides with an NPC collider for instance they will just go through each other ~but they will still generate collision events~!
+
+physics_world:addCollisionClass('PlayerNOCLIP', {ignores = {'NPC', 'Enemy', 'Solid'}})
+collider:changeCollisionClass('PlayerNOCLIP')
+If I want to make it so that the player can go through walls, I can create an additional collision class that ignores collisions with Solids
+Then I can change the player's collider to this new collision class whenever needed
+
+Collision classes can have additional settings, like 
+physics_world:addCollisionClass('Player', {ignores = {'NPC'}, enter = {'NPC', 'Enemy'}, exit = {'Enemy'}})
+In this case it will ignore NPCs, generate ENTER collision events for NPC and Enemy and generate EXIT collision events for Enemy
+
+-- Collision events
+Collision events can be checked by doing
+if collider:enter('tag') then ... end
+The possible calls are enter, exit, pre and post
+
+collider:whatever returns as its first argument either true or false. When it returns true additional arguments are also returned
+which contain a Contact structure with more information about the collision
+local _, contact = collider:enter('tag')
+
+The post call returns even more arguments
+local _, contact, normal_impulse1, tangent_impulse1, normal_impulse2, tangent_impulse2 = collider:post('tag')
+
+This just mimicks box2d callbacks https://www.love2d.org/wiki/Tutorial:PhysicsCollisionCallbacks but wraps them in a function call that can be called on an update function
+
+-- World queries
+to be defined
