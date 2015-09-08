@@ -20,7 +20,7 @@ end
 
 -- Collider 
 function Player:init()
-    self.collider = hx.newCollider(params)
+    self.collider = physics_world:newCollider(params)
 end
 
 function Player:update(dt)
@@ -36,7 +36,7 @@ end
 
 -- Collision classes
 physics_world:addCollisionClass('Player', ignores = {'NPC', 'Enemy'}})
-collider = hx.newCollider({collision_class = 'Player'})
+collider = physics_world:newCollider({collision_class = 'Player'})
 This means this collider is of collision_class 'Player' and will ignore colliders of collision_class 'NPC' and 'Enemy'
 So whenever this collider collides with an NPC collider for instance they will just go through each other ~but they will still generate collision events~!
 
