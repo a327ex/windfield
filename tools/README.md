@@ -23,6 +23,10 @@ hxdx
   - [exit](#exitothercollisionclassname)
   - [pre](#preothercollisionclassname)
   - [post](#postothercollisionclassname)
+  - [addJoint](#addjointjointname-jointtype-)
+  - [addShape](#addshapeshapename-shapetype-)
+  - [removeJoint](#removejointjointname)
+  - [removeShape](#removeshapeshapename)
 
 # World
 
@@ -86,9 +90,9 @@ Arguments:
 
 Settings:
 
-- `[ignores]` `(table[string])` - The collision class names that this collision class will physically ignore
-- `[enter]` `(table[string])` - The collision class names that will generate collision events when they enter contact with this collision class
-- `[exit]` `(table[string])` - The collision class names that will generate collision events when they exit contact with this collision class
+- `[ignores]` `(table[string])` - The collision class names that will be physically ignored
+- `[enter]` `(table[string])` - The collision class names that will generate collision events when they enter contact
+- `[exit]` `(table[string])` - The collision class names that will generate collision events when they exit contact
 - `[pre]` `(table[string])` - The collision class names that will generate collision events right before collision response is applied
 - `[post]` `(table[string])` - The collision class names that will generate collision events right after collision response is applied
 
@@ -426,4 +430,48 @@ Returns:
 - `number` - The amount of impulse applied along the tangent of the first point of collision
 - `number` - The amount of impulse applied along the normal of the second point of collision
 - `number` - The amount of impulse applied along the tangent of the second point of collision
+
+---
+
+#### `:addJoint(joint_name, joint_type, ...)`
+
+Adds a joint to the collider. A joint can be accessed via collider.joints[joint_name]
+
+Arguments:
+
+- `joint_name` `(string)` - The unique name of the joint
+- `joint_type` `(string)` - The joint type, can be 'DistanceJoint', 'FrictionJoint', 'GearJoint', 'MouseJoint', 'PrismaticJoint', 'PulleyJoint', 'RevoluteJoint', 'RopeJoint', 'WeldJoint' or 'WheelJoint'
+- `...` `(*)` - The joint creation arguments that are different for each joint type. Check [here](https://www.love2d.org/wiki/Joint) for more details
+
+---
+
+#### `:addShape(shape_name, shape_type, ...)`
+
+Adds a shape to the collider. A shape can be accessed via collider.shapes[shape_name]. A fixture of the same name is also added to attach the shape to the collider body. A fixture can be accessed via collider.fixtures[fixture_name]
+
+Arguments:
+
+- `shape_name` `(string)` - The unique name of the shape
+- `shape_type` `(string)` - The shape type, can be 'ChainShape', 'CircleShape', 'EdgeShape', 'PolygonShape' or 'RectangleShape'
+- `...` `(*)` - The shape creation arguments that are different for each shape type. Check [here](https://www.love2d.org/wiki/Shape) for more details
+
+---
+
+#### `:removeJoint(joint_name)`
+
+Removes a joint from the collider
+
+Arguments:
+
+- `joint_name` `(string)` - The unique name of the joint to be removed. Must be a name previously added with `addJoint`
+
+---
+
+#### `:removeShape(shape_name)`
+
+Removes a shape from the collider (also removes the accompanying fixture)
+
+Arguments:
+
+- `shape_name` `(string)` - The unique name of the shape to be removed. Must be a name previously added with `addShape`
 

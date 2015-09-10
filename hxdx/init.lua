@@ -52,9 +52,9 @@ end
 -- @luaend
 -- @arg {string} collision_class_name - The unique name of the collision class
 -- @arg {table} collision_class - The collision class. This table can contain:
--- @setting {table[string]=} ignores - The collision class names that this collision class will physically ignore
--- @setting {table[string]=} enter - The collision class names that will generate collision events when they enter contact with this collision class 
--- @setting {table[string]=} exit - The collision class names that will generate collision events when they exit contact with this collision class
+-- @setting {table[string]=} ignores - The collision class names that will be physically ignored
+-- @setting {table[string]=} enter - The collision class names that will generate collision events when they enter contact 
+-- @setting {table[string]=} exit - The collision class names that will generate collision events when they exit contact 
 -- @setting {table[string]=} pre - The collision class names that will generate collision events right before collision response is applied 
 -- @setting {table[string]=} post - The collision class names that will generate collision events right after collision response is applied
 function World:addCollisionClass(collision_class_name, collision_class)
@@ -320,6 +320,34 @@ end
 -- @returns {number} The amount of impulse applied along the normal of the second point of collision
 -- @returns {number} The amount of impulse applied along the tangent of the second point of collision
 function Collider:post(other_collision_class_name)
+    
+end
+
+--- Adds a joint to the collider. A joint can be accessed via collider.joints[joint_name]
+-- @arg {string} joint_name - The unique name of the joint
+-- @arg {string} joint_type - The joint type, can be 'DistanceJoint', 'FrictionJoint', 'GearJoint', 'MouseJoint', 'PrismaticJoint', 'PulleyJoint', 'RevoluteJoint', 'RopeJoint', 'WeldJoint' or 'WheelJoint'
+-- @arg {*} ... - The joint creation arguments that are different for each joint type. Check [here](https://www.love2d.org/wiki/Joint) for more details
+function Collider:addJoint(joint_name, joint_type, ...)
+    
+end
+
+--- Adds a shape to the collider. A shape can be accessed via collider.shapes[shape_name]. A fixture of the same name is also added to attach the shape to the collider body. A fixture can be accessed via collider.fixtures[fixture_name]
+-- @arg {string} shape_name - The unique name of the shape
+-- @arg {string} shape_type - The shape type, can be 'ChainShape', 'CircleShape', 'EdgeShape', 'PolygonShape' or 'RectangleShape'
+-- @arg {*} ... - The shape creation arguments that are different for each shape type. Check [here](https://www.love2d.org/wiki/Shape) for more details
+function Collider:addShape(shape_name, shape_type, ...)
+    
+end
+
+--- Removes a joint from the collider
+-- @arg {string} joint_name - The unique name of the joint to be removed. Must be a name previously added with `addJoint`
+function Collider:removeJoint(joint_name)
+    
+end
+
+--- Removes a shape from the collider (also removes the accompanying fixture)
+-- @arg {string} shape_name - The unique name of the shape to be removed. Must be a name previously added with `addShape`
+function Collider:removeShape(shape_name)
     
 end
 
