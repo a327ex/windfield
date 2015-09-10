@@ -14,7 +14,10 @@ World.__index = World
 -- @arg {table=} settings - Table with optional settings for the world
 -- @returns {World}
 function hx.newWorld(settings)
-    return hx.World.new(hx, settings)
+    local world = hx.World.new(hx, settings)
+    world:addCollisionClass('Default')
+    world:collisionClassesSet()
+    return world
 end
 
 function World.new(hx, settings)
@@ -49,11 +52,11 @@ end
 -- @luaend
 -- @arg {string} collision_class_name - The unique name of the collision class
 -- @arg {table} collision_class - The collision class. This table can contain:
--- @setting {table[string]=} ignores - A table of strings containing other collision class names that this collision class will physically ignore (they will go through each other). In the example above, colliders of collision class `'Player'` will ignore colliders of collision class `'NPC'` and `'Enemy'`.
--- @setting {table[string]=} enter - A table of strings containing other collision class names that will generate collision events when they enter contact with this collision class. In the example above, colliders of collision class `'Player'` will generate collision events on the frame they enter contact with colliders of collision class `'LevelTransitionArea'`. 
--- @setting {table[string]=} exit - A table of strings containing other collision class names that will generate collision events when they leave contact with this collision class. In the example above, colliders of collision class `'Player'` will generate collision events on the frame they exit contact with colliders of collision class `'Projectile'`.
--- @setting {table[string]=} pre - A table of strings containing other collision class names that will generate collision events right before collision response is applied. 
--- @setting {table[string]=} post - A table of strings containing other collision class names that will generate collision events right after collision response is applied.
+-- @setting {table[string]=} ignores - The collision class names that this collision class will physically ignore
+-- @setting {table[string]=} enter - The collision class names that will generate collision events when they enter contact with this collision class 
+-- @setting {table[string]=} exit - The collision class names that will generate collision events when they exit contact with this collision class
+-- @setting {table[string]=} pre - The collision class names that will generate collision events right before collision response is applied 
+-- @setting {table[string]=} post - The collision class names that will generate collision events right after collision response is applied
 function World:addCollisionClass(collision_class_name, collision_class)
     
 end
@@ -221,8 +224,15 @@ function Collider.new(physics_world, collider_type, ...)
     local self = {}
     self.physics_world = physics_world
     self.type = collider_type
+    self.body = nil
+    self.fixtures = {}
+    self.sensors = {}
+    self.shapes = {}
+    self.joints = {}
 
     local args = {...}
+    self.collision_class = args.collision_class or 'Default'
+
     if self.type == 'Circle' then
 
     elseif self.type == 'Rectangle' then

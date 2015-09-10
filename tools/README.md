@@ -86,11 +86,11 @@ Arguments:
 
 Settings:
 
-- `[ignores]` `(table[string])` - A table of strings containing other collision class names that this collision class will physically ignore (they will go through each other). In the example above, colliders of collision class `'Player'` will ignore colliders of collision class `'NPC'` and `'Enemy'`.
-- `[enter]` `(table[string])` - A table of strings containing other collision class names that will generate collision events when they enter contact with this collision class. In the example above, colliders of collision class `'Player'` will generate collision events on the frame they enter contact with colliders of collision class `'LevelTransitionArea'`.
-- `[exit]` `(table[string])` - A table of strings containing other collision class names that will generate collision events when they leave contact with this collision class. In the example above, colliders of collision class `'Player'` will generate collision events on the frame they exit contact with colliders of collision class `'Projectile'`.
-- `[pre]` `(table[string])` - A table of strings containing other collision class names that will generate collision events right before collision response is applied.
-- `[post]` `(table[string])` - A table of strings containing other collision class names that will generate collision events right after collision response is applied.
+- `[ignores]` `(table[string])` - The collision class names that this collision class will physically ignore
+- `[enter]` `(table[string])` - The collision class names that will generate collision events when they enter contact with this collision class
+- `[exit]` `(table[string])` - The collision class names that will generate collision events when they exit contact with this collision class
+- `[pre]` `(table[string])` - The collision class names that will generate collision events right before collision response is applied
+- `[post]` `(table[string])` - The collision class names that will generate collision events right after collision response is applied
 
 ---
 
