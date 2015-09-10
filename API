@@ -64,4 +64,16 @@ local _, contact, normal_impulse1, tangent_impulse1, normal_impulse2, tangent_im
 This just mimicks box2d callbacks https://www.love2d.org/wiki/Tutorial:PhysicsCollisionCallbacks but wraps them in a function call that can be called on an update function
 
 -- World queries
-to be defined
+getClosestInCircleArea
+getClosestInRectangleArea
+getClosestInPolygonArea
+getClosestInLine
+queryCircleArea
+queryRectangleArea
+queryPolygonArea
+queryLine
+
+-- Effectors (see Unity's)
+AreaEffector - applies force to all entities inside the area, uses a Collider to define area shape, has multiple force/distance formulas
+PointEffector - applies force from the point to all entities inside the circle around the point, has multiple force/distance formulas
+SurfaceEffector - applies different types of behavior to objects whenever they touch another's surface, including getting stuck, being applied a force or being repulsed heavily
