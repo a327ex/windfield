@@ -52,8 +52,8 @@ end
 -- @setting {table[string]=} ignores - A table of strings containing other collision class names that this collision class will physically ignore (they will go through each other). In the example above, colliders of collision class `'Player'` will ignore colliders of collision class `'NPC'` and `'Enemy'`.
 -- @setting {table[string]=} enter - A table of strings containing other collision class names that will generate collision events when they enter contact with this collision class. In the example above, colliders of collision class `'Player'` will generate collision events on the frame they enter contact with colliders of collision class `'LevelTransitionArea'`. 
 -- @setting {table[string]=} exit - A table of strings containing other collision class names that will generate collision events when they leave contact with this collision class. In the example above, colliders of collision class `'Player'` will generate collision events on the frame they exit contact with colliders of collision class `'Projectile'`.
--- @setting {table[string]=} pre - A table of strings containing other collision class names that will generate collision events right before they enter contact with this collision class. 
--- @setting {table[string]=} post - A table of strings containing other collision class names that will generate collision events right after they exit contact with this collision class.
+-- @setting {table[string]=} pre - A table of strings containing other collision class names that will generate collision events right before collision response is applied. 
+-- @setting {table[string]=} post - A table of strings containing other collision class names that will generate collision events right after collision response is applied.
 function World:addCollisionClass(collision_class_name, collision_class)
     
 end
@@ -72,7 +72,7 @@ end
 -- @arg {number} r - The radius of the circle
 -- @arg {table=} settings - A table with additional and optional settings. This table can contain:
 -- @setting {BodyType='dynamic'} body_type - The body type, can be 'static', 'dynamic' or 'kinematic'
--- @setting {string=} collision_class - The collision class of the circle, must be a valid collision class previously added with `addColliisonClass`
+-- @setting {string=} collision_class - The collision class of the circle, must be a valid collision class previously added with `addCollisionClass`
 -- @returns {Collider}
 function World:newCircleCollider(x, y, r, settings)
     return self.hx.Collider.new(self, 'Circle', x, y, r, settings)
@@ -88,7 +88,7 @@ end
 -- @arg {number} h - The height of the rectangle (y - h/2 = rectangle's top side)
 -- @arg {table=} settings - A table with additional and optional settings. This table can contain:
 -- @setting {BodyType='dynamic'} body_type - The body type, can be 'static', 'dynamic' or 'kinematic'
--- @setting {string=} collision_class - The collision class of the rectangle, must be a valid collision class previously added with `addColliisonClass`
+-- @setting {string=} collision_class - The collision class of the rectangle, must be a valid collision class previously added with `addCollisionClass`
 -- @returns {Collider}
 function World:newRectangleCollider(x, y, w, h, settings)
     return self.hx.Collider.new(self, 'Rectangle', x, y, w, h, settings)
@@ -105,7 +105,7 @@ end
 -- @arg {number} corner_cut_size - The corner cut size
 -- @arg {table=} settings - A table with additional and optional settings. This table can contain:
 -- @setting {BodyType='dynamic'} body_type - The body type, can be 'static', 'dynamic' or 'kinematic'
--- @setting {string=} collision_class - The collision class of the rectangle, must be a valid collision class previously added with `addColliisonClass`
+-- @setting {string=} collision_class - The collision class of the rectangle, must be a valid collision class previously added with `addCollisionClass`
 -- @returns {Collider}
 function World:newBSGRectangleCollider(x, y, w, h, corner_cut_size, settings)
     return self.hx.Collider.new(self, 'BSGRectangle', x, y, w, h, corner_cut_size, settings)
@@ -118,7 +118,7 @@ end
 -- @arg {table[number]} vertices - The polygon vertices as a table of numbers
 -- @arg {table=} settings - A table with additional and optional settings. This table can contain:
 -- @setting {BodyType='dynamic'} body_type - The body type, can be 'static', 'dynamic' or 'kinematic'
--- @setting {string=} collision_class - The collision class of the polygon, must be a valid collision class previously added with `addColliisonClass`
+-- @setting {string=} collision_class - The collision class of the polygon, must be a valid collision class previously added with `addCollisionClass`
 -- @returns {Collider}
 function World:newPolygonCollider(vertices, settings)
     return self.hx.Collider.new(self, 'Polygon', vertices, settings)
@@ -134,7 +134,7 @@ end
 -- @arg {number} y2 - The final y position of the line
 -- @arg {table=} settings - A table with additional and optional settings. This table can contain:
 -- @setting {BodyType='dynamic'} body_type - The body type, can be 'static', 'dynamic' or 'kinematic'
--- @setting {string=} collision_class - The collision class of the line, must be a valid collision class previously added with `addColliisonClass`
+-- @setting {string=} collision_class - The collision class of the line, must be a valid collision class previously added with `addCollisionClass`
 -- @returns {Collider}
 function World:newLineCollider(x1, y1, x2, y2, settings)
     return self.hx.Collider.new(self, 'Line', x1, y1, x2, y2, settings)
@@ -148,10 +148,68 @@ end
 -- @arg {boolean} loop - If the chain should loop back from the last to the first point
 -- @arg {table=} settings - A table with additional and optional settings. This table can contain:
 -- @setting {BodyType='dynamic'} body_type - The body type, can be 'static', 'dynamic' or 'kinematic'
--- @setting {string=} collision_class - The collision class of the chain, must be a valid collision class previously added with `addColliisonClass`
+-- @setting {string=} collision_class - The collision class of the chain, must be a valid collision class previously added with `addCollisionClass`
 -- @returns {Collider}
 function World:newChainCollider(vertices, loop, settings)
     return self.hx.Collider.new(self, 'Chain', vertices, loop, settings)
+end
+
+-- Internal AABB box2d query used before going for more specific and precise computations.
+function World:queryBoundingBox(x1, y1, x2, y2, callback)
+
+end
+
+--- Queries a circular area around a point for colliders
+-- @luastart
+-- @code colliders_1 = physics_world:queryCircleArea(100, 100, 50, {'Enemy', 'NPC'})
+-- @code colliders_2 = physics_world:queryCircleArea(100, 100, 50, {'All', except = {'Player'}})
+-- @luaend
+-- @arg {number} x - The initial x position of the circle (center)
+-- @arg {number} y - The initial y position of the circle (center)
+-- @arg {number} r - The radius of the circle
+-- @arg {table[string]='All'} collision_class_names - A table of strings with collision class names to be queried. The special value `'All'` (default) can be used to query for all existing collision class names. Another special value (a table of collision class names) `except` can be used to exclude some collision class names when `'All'` is used.
+function World:queryCircleArea(x, y, radius, collision_class_names)
+    
+end
+
+--- Queries a rectangular area around a point for colliders
+-- @luastart
+-- @code -- In both examples x, y are the center of the rectangle, meaning the top-left points on both is 75, 75
+-- @code colliders_1 = physics_world:queryRectangleArea(100, 100, 50, 50 {'Enemy', 'NPC'})
+-- @code colliders_2 = physics_world:queryRectangleArea(100, 100, 50, 50, {'All', except = {'Player'}})
+-- @luaend
+-- @arg {number} x - The initial x position of the rectangle (center)
+-- @arg {number} y - The initial y position of the rectangle (center)
+-- @arg {number} w - The width of the rectangle (x - w/2 = rectangle's left side)
+-- @arg {number} h - The height of the rectangle (y - h/2 = rectangle's top side)
+-- @arg {table[string]='All'} collision_class_names - A table of strings with collision class names to be queried. The special value `'All'` (default) can be used to query for all existing collision class names. Another special value (a table of collision class names) `except` can be used to exclude some collision class names when `'All'` is used.
+function World:queryRectangleArea(x, y, w, h, collision_class_names)
+    
+end
+
+--- Queries an arbitrary area for colliders
+-- @luastart
+-- @code colliders = physics_world:queryPolygonArea({10, 10, 20, 10, 20, 20, 10, 20}, {'Enemy'})
+-- @code colliders = physics_world:queryPolygonArea({10, 10, 20, 10, 20, 20, 10, 20}, {'All', except = {'Player'}})
+-- @luaend
+-- @arg {table[number]} vertices - The polygon vertices as a table of numbers
+-- @arg {table[string]='All'} collision_class_names - A table of strings with collision class names to be queried. The special value `'All'` (default) can be used to query for all existing collision class names. Another special value (a table of collision class names) `except` can be used to exclude some collision class names when `'All'` is used.
+function World:queryPolygonArea(vertices, collision_class_names)
+    
+end
+
+--- Queries for colliders that intersect with a line
+-- @luastart
+-- @code colliders = physics_world:queryLine(100, 100, 200, 200, {'Enemy', 'NPC', 'Projectile'})
+-- @code colliders = physics_world:queryLine(100, 100, 200, 200, {'All', except = {'Player'}})
+-- @luaend
+-- @arg {number} x1 - The initial x position of the line
+-- @arg {number} y1 - The initial y position of the line
+-- @arg {number} x2 - The final x position of the line
+-- @arg {number} y2 - The final y position of the line
+-- @arg {table[string]='All'} collision_class_names - A table of strings with collision class names to be queried. The special value `'All'` (default) can be used to query for all existing collision class names. Another special value (a table of collision class names) `except` can be used to exclude some collision class names when `'All'` is used.
+function World:queryLine(x1, y1, x2, y2, collision_class_names)
+    
 end
 
 --- @class Collider 
@@ -180,6 +238,79 @@ function Collider.new(physics_world, collider_type, ...)
     end
 
     return setmetatable(self, Collider)
+end
+
+--- Changes this collider's collision class. The new collision class must be a valid one previously added with `addCollisionClass`
+-- @luastart
+-- @code physics_world:addCollisionClass('Player', {enter = {'LevelTransitionArea'}})
+-- @code physics_world:addCollisionClass('PlayerNOCLIP', {ignores = {'Solid'}, enter = {'LevelTransitionArea'}})
+-- @code physics_world:collisionClassesSet()
+-- @code collider = physics_world:newRectangleCollider(100, 100, 12, 24, {collision_class = 'Player'})
+-- @code collider:changeCollisionClass('PlayerNOCLIP')
+-- @luaend
+-- @arg {string} collision_class_name - The unique name of the new collision class
+function Collider:changeCollisionClass(collision_class_name)
+
+end
+
+--- Checks for collision enter events from this collider with another
+-- @luastart
+-- @code if collider:enter('Enemy') then
+-- @code   local _, enemy_collider = collider:enter('Enemy')
+-- @code end
+-- @luaend
+-- @arg {string} other_collision_class_name - The unique name of the target collision class
+-- @returns {boolean} If the enter collision event between both collision classes happened on this frame or not
+-- @returns {Collider} The target Collider
+-- @returns {Contact} The [Contact](https://www.love2d.org/wiki/Contact) object
+function Collider:enter(other_collision_class_name)
+    
+end
+
+--- Checks for collision exit events from this collider with another
+-- @luastart
+-- @code if collider:exit('Enemy') then
+-- @code   local _, enemy_collider = collider:exit('Enemy')
+-- @code end
+-- @luaend
+-- @arg {string} other_collision_class_name - The unique name of the target collision class
+-- @returns {boolean} If the enter collision event between both collision classes happened on this frame or not
+-- @returns {Collider} The target Collider
+-- @returns {Contact} The [Contact](https://www.love2d.org/wiki/Contact) object
+function Collider:exit(other_collision_class_name)
+
+end
+
+--- Checks for collision events that happen right before collision response is applied
+-- @luastart
+-- @code if collider:pre('Enemy') then
+-- @code   local _, enemy_collider = collider:pre('Enemy')
+-- @code end
+-- @luaend
+-- @arg {string} other_collision_class_name - The unique name of the target collision class
+-- @returns {boolean} If the enter collision event between both collision classes happened on this frame or not
+-- @returns {Collider} The target Collider
+-- @returns {Contact} The [Contact](https://www.love2d.org/wiki/Contact) object
+function Collider:pre(other_collision_class_name)
+    
+end
+
+--- Checks for collision events that happen right after collision response is applied
+-- @luastart
+-- @code if collider:post('Enemy') then
+-- @code   local _, enemy_collider, _, ni1, ti1, ni2, ti2 = collider:post('Enemy')
+-- @code end
+-- @luaend
+-- @arg {string} other_collision_class_name - The unique name of the target collision class
+-- @returns {boolean} If the enter collision event between both collision classes happened on this frame or not
+-- @returns {Collider} The target Collider
+-- @returns {Contact} The [Contact](https://www.love2d.org/wiki/Contact) object
+-- @returns {number} The amount of impulse applied along the normal of the first point of collision
+-- @returns {number} The amount of impulse applied along the tangent of the first point of collision
+-- @returns {number} The amount of impulse applied along the normal of the second point of collision
+-- @returns {number} The amount of impulse applied along the tangent of the second point of collision
+function Collider:post(other_collision_class_name)
+    
 end
 
 hx.World = World

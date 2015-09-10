@@ -12,6 +12,17 @@ hxdx
   - [newBSGRectangleCollider](#newbsgrectanglecolliderx-y-w-h-cornercutsize-settings)
   - [newPolygonCollider](#newpolygoncollidervertices-settings)
   - [newLineCollider](#newlinecolliderx1-y1-x2-y2-settings)
+  - [newChainCollider](#newchaincollidervertices-loop-settings)
+  - [queryCircleArea](#querycircleareax-y-r-collisionclassnames)
+  - [queryRectangleArea](#queryrectangleareax-y-w-h-collisionclassnames)
+  - [queryPolygonArea](#querypolygonareavertices-collisionclassnames)
+  - [queryLine](#querylinex1-y1-x2-y2-collisionclassnames)
+- [Collider](#collider)
+  - [changeCollisionClass](#changecollisionclasscollisionclassname)
+  - [enter](#enterothercollisionclassname)
+  - [exit](#exitothercollisionclassname)
+  - [pre](#preothercollisionclassname)
+  - [post](#postothercollisionclassname)
 
 # World
 
@@ -32,7 +43,7 @@ Arguments:
 
 Returns:
 
-- `World`
+- `World` - 
 
 ---
 
@@ -78,8 +89,8 @@ Settings:
 - `[ignores]` `(table[string])` - A table of strings containing other collision class names that this collision class will physically ignore (they will go through each other). In the example above, colliders of collision class `'Player'` will ignore colliders of collision class `'NPC'` and `'Enemy'`.
 - `[enter]` `(table[string])` - A table of strings containing other collision class names that will generate collision events when they enter contact with this collision class. In the example above, colliders of collision class `'Player'` will generate collision events on the frame they enter contact with colliders of collision class `'LevelTransitionArea'`.
 - `[exit]` `(table[string])` - A table of strings containing other collision class names that will generate collision events when they leave contact with this collision class. In the example above, colliders of collision class `'Player'` will generate collision events on the frame they exit contact with colliders of collision class `'Projectile'`.
-- `[pre]` `(table[string])` - A table of strings containing other collision class names that will generate collision events right before they enter contact with this collision class.
-- `[post]` `(table[string])` - A table of strings containing other collision class names that will generate collision events right after they exit contact with this collision class.
+- `[pre]` `(table[string])` - A table of strings containing other collision class names that will generate collision events right before collision response is applied.
+- `[post]` `(table[string])` - A table of strings containing other collision class names that will generate collision events right after collision response is applied.
 
 ---
 
@@ -106,11 +117,11 @@ Arguments:
 Settings:
 
 - `[body_type='dynamic']` `(BodyType)` - The body type, can be 'static', 'dynamic' or 'kinematic'
-- `[collision_class]` `(string)` - The collision class of the circle, must be a valid collision class previously added with `addColliisonClass`
+- `[collision_class]` `(string)` - The collision class of the circle, must be a valid collision class previously added with `addCollisionClass`
 
 Returns:
 
-- `Collider`
+- `Collider` - 
 
 ---
 
@@ -132,11 +143,11 @@ Arguments:
 Settings:
 
 - `[body_type='dynamic']` `(BodyType)` - The body type, can be 'static', 'dynamic' or 'kinematic'
-- `[collision_class]` `(string)` - The collision class of the rectangle, must be a valid collision class previously added with `addColliisonClass`
+- `[collision_class]` `(string)` - The collision class of the rectangle, must be a valid collision class previously added with `addCollisionClass`
 
 Returns:
 
-- `Collider`
+- `Collider` - 
 
 ---
 
@@ -159,11 +170,11 @@ Arguments:
 Settings:
 
 - `[body_type='dynamic']` `(BodyType)` - The body type, can be 'static', 'dynamic' or 'kinematic'
-- `[collision_class]` `(string)` - The collision class of the rectangle, must be a valid collision class previously added with `addColliisonClass`
+- `[collision_class]` `(string)` - The collision class of the rectangle, must be a valid collision class previously added with `addCollisionClass`
 
 Returns:
 
-- `Collider`
+- `Collider` - 
 
 ---
 
@@ -182,11 +193,11 @@ Arguments:
 Settings:
 
 - `[body_type='dynamic']` `(BodyType)` - The body type, can be 'static', 'dynamic' or 'kinematic'
-- `[collision_class]` `(string)` - The collision class of the polygon, must be a valid collision class previously added with `addColliisonClass`
+- `[collision_class]` `(string)` - The collision class of the polygon, must be a valid collision class previously added with `addCollisionClass`
 
 Returns:
 
-- `Collider`
+- `Collider` - 
 
 ---
 
@@ -208,9 +219,211 @@ Arguments:
 Settings:
 
 - `[body_type='dynamic']` `(BodyType)` - The body type, can be 'static', 'dynamic' or 'kinematic'
-- `[collision_class]` `(string)` - The collision class of the line, must be a valid collision class previously added with `addColliisonClass`
+- `[collision_class]` `(string)` - The collision class of the line, must be a valid collision class previously added with `addCollisionClass`
 
 Returns:
 
-- `Collider`
+- `Collider` - 
+
+---
+
+#### `:newChainCollider(vertices, loop, settings)`
+
+Creates a new ChainCollider
+
+```lua
+collider = physics_world:newChainCollider({10, 10, 10, 20, 20, 20}, true, {body_type = 'static', collision_class = 'Ground'})
+```
+Arguments:
+
+- `vertices` `(table[number])` - The chain vertices as a table of numbers
+- `loop` `(boolean)` - If the chain should loop back from the last to the first point
+- `[settings]` `(table)` - A table with additional and optional settings. This table can contain:
+
+Settings:
+
+- `[body_type='dynamic']` `(BodyType)` - The body type, can be 'static', 'dynamic' or 'kinematic'
+- `[collision_class]` `(string)` - The collision class of the chain, must be a valid collision class previously added with `addCollisionClass`
+
+Returns:
+
+- `Collider` - 
+
+---
+
+#### `:queryCircleArea(x, y, r, collision_class_names)`
+
+Queries a circular area around a point for colliders
+
+```lua
+colliders_1 = physics_world:queryCircleArea(100, 100, 50, {'Enemy', 'NPC'})
+colliders_2 = physics_world:queryCircleArea(100, 100, 50, {'All', except = {'Player'}})
+```
+Arguments:
+
+- `x` `(number)` - The initial x position of the circle (center)
+- `y` `(number)` - The initial y position of the circle (center)
+- `r` `(number)` - The radius of the circle
+- `[collision_class_names='All']` `(table[string])` - A table of strings with collision class names to be queried. The special value `'All'` (default) can be used to query for all existing collision class names. Another special value (a table of collision class names) `except` can be used to exclude some collision class names when `'All'` is used.
+
+---
+
+#### `:queryRectangleArea(x, y, w, h, collision_class_names)`
+
+Queries a rectangular area around a point for colliders
+
+```lua
+-- In both examples x, y are the center of the rectangle, meaning the top-left points on both is 75, 75
+colliders_1 = physics_world:queryRectangleArea(100, 100, 50, 50 {'Enemy', 'NPC'})
+colliders_2 = physics_world:queryRectangleArea(100, 100, 50, 50, {'All', except = {'Player'}})
+```
+Arguments:
+
+- `x` `(number)` - The initial x position of the rectangle (center)
+- `y` `(number)` - The initial y position of the rectangle (center)
+- `w` `(number)` - The width of the rectangle (x - w/2 = rectangle's left side)
+- `h` `(number)` - The height of the rectangle (y - h/2 = rectangle's top side)
+- `[collision_class_names='All']` `(table[string])` - A table of strings with collision class names to be queried. The special value `'All'` (default) can be used to query for all existing collision class names. Another special value (a table of collision class names) `except` can be used to exclude some collision class names when `'All'` is used.
+
+---
+
+#### `:queryPolygonArea(vertices, collision_class_names)`
+
+Queries an arbitrary area for colliders
+
+```lua
+colliders = physics_world:queryPolygonArea({10, 10, 20, 10, 20, 20, 10, 20}, {'Enemy'})
+colliders = physics_world:queryPolygonArea({10, 10, 20, 10, 20, 20, 10, 20}, {'All', except = {'Player'}})
+```
+Arguments:
+
+- `vertices` `(table[number])` - The polygon vertices as a table of numbers
+- `[collision_class_names='All']` `(table[string])` - A table of strings with collision class names to be queried. The special value `'All'` (default) can be used to query for all existing collision class names. Another special value (a table of collision class names) `except` can be used to exclude some collision class names when `'All'` is used.
+
+---
+
+#### `:queryLine(x1, y1, x2, y2, collision_class_names)`
+
+Queries for colliders that intersect with a line
+
+```lua
+colliders = physics_world:queryLine(100, 100, 200, 200, {'Enemy', 'NPC', 'Projectile'})
+colliders = physics_world:queryLine(100, 100, 200, 200, {'All', except = {'Player'}})
+```
+Arguments:
+
+- `x1` `(number)` - The initial x position of the line
+- `y1` `(number)` - The initial y position of the line
+- `x2` `(number)` - The final x position of the line
+- `y2` `(number)` - The final y position of the line
+- `[collision_class_names='All']` `(table[string])` - A table of strings with collision class names to be queried. The special value `'All'` (default) can be used to query for all existing collision class names. Another special value (a table of collision class names) `except` can be used to exclude some collision class names when `'All'` is used.
+
+# Collider
+
+A collider is a box2d physics object (body + shape + fixture) that has a collision class and that can generate collision events.
+
+---
+
+#### `:changeCollisionClass(collision_class_name)`
+
+Changes this collider's collision class. The new collision class must be a valid one previously added with `addCollisionClass`
+
+```lua
+physics_world:addCollisionClass('Player', {enter = {'LevelTransitionArea'}})
+physics_world:addCollisionClass('PlayerNOCLIP', {ignores = {'Solid'}, enter = {'LevelTransitionArea'}})
+physics_world:collisionClassesSet()
+collider = physics_world:newRectangleCollider(100, 100, 12, 24, {collision_class = 'Player'})
+collider:changeCollisionClass('PlayerNOCLIP')
+```
+Arguments:
+
+- `collision_class_name` `(string)` - The unique name of the new collision class
+
+---
+
+#### `:enter(other_collision_class_name)`
+
+Checks for collision enter events from this collider with another
+
+```lua
+if collider:enter('Enemy') then
+  local _, enemy_collider = collider:enter('Enemy')
+end
+```
+Arguments:
+
+- `other_collision_class_name` `(string)` - The unique name of the target collision class
+
+Returns:
+
+- `boolean` - If the enter collision event between both collision classes happened on this frame or not
+- `Collider` - The target Collider
+- `Contact` - The [Contact](https://www.love2d.org/wiki/Contact) object
+
+---
+
+#### `:exit(other_collision_class_name)`
+
+Checks for collision exit events from this collider with another
+
+```lua
+if collider:exit('Enemy') then
+  local _, enemy_collider = collider:exit('Enemy')
+end
+```
+Arguments:
+
+- `other_collision_class_name` `(string)` - The unique name of the target collision class
+
+Returns:
+
+- `boolean` - If the enter collision event between both collision classes happened on this frame or not
+- `Collider` - The target Collider
+- `Contact` - The [Contact](https://www.love2d.org/wiki/Contact) object
+
+---
+
+#### `:pre(other_collision_class_name)`
+
+Checks for collision events that happen right before collision response is applied
+
+```lua
+if collider:pre('Enemy') then
+  local _, enemy_collider = collider:pre('Enemy')
+end
+```
+Arguments:
+
+- `other_collision_class_name` `(string)` - The unique name of the target collision class
+
+Returns:
+
+- `boolean` - If the enter collision event between both collision classes happened on this frame or not
+- `Collider` - The target Collider
+- `Contact` - The [Contact](https://www.love2d.org/wiki/Contact) object
+
+---
+
+#### `:post(other_collision_class_name)`
+
+Checks for collision events that happen right after collision response is applied
+
+```lua
+if collider:post('Enemy') then
+  local _, enemy_collider, _, ni1, ti1, ni2, ti2 = collider:post('Enemy')
+end
+```
+Arguments:
+
+- `other_collision_class_name` `(string)` - The unique name of the target collision class
+
+Returns:
+
+- `boolean` - If the enter collision event between both collision classes happened on this frame or not
+- `Collider` - The target Collider
+- `Contact` - The [Contact](https://www.love2d.org/wiki/Contact) object
+- `number` - The amount of impulse applied along the normal of the first point of collision
+- `number` - The amount of impulse applied along the tangent of the first point of collision
+- `number` - The amount of impulse applied along the normal of the second point of collision
+- `number` - The amount of impulse applied along the tangent of the second point of collision
 

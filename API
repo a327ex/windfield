@@ -64,10 +64,6 @@ local _, contact, normal_impulse1, tangent_impulse1, normal_impulse2, tangent_im
 This just mimicks box2d callbacks https://www.love2d.org/wiki/Tutorial:PhysicsCollisionCallbacks but wraps them in a function call that can be called on an update function
 
 -- World queries
-getClosestInCircleArea
-getClosestInRectangleArea
-getClosestInPolygonArea
-getClosestInLine
 queryCircleArea
 queryRectangleArea
 queryPolygonArea

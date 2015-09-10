@@ -127,7 +127,8 @@ for _, comment in ipairs(comments) do
       io.write('Returns:\n\n')
 
       for _, result in ipairs(tags.returns) do
-        io.write('- `' .. result.type .. '`\n')
+        local desc = result.description:sub(result.description:find('}') + 2, -1)
+        io.write('- `' .. result.type .. '` - ' .. desc .. '\n')
       end
 
       io.write('\n')
