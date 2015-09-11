@@ -7,8 +7,8 @@ function love.load()
     world:addCollisionClass('Ghost', {ignores = {'Default'}})
     world:collisionClassesSet()
 
-    box = world:newRectangleCollider(50, 50, 50, 50, {collision_class = 'Ghost'})
-    ground = world:newRectangleCollider(50, 150, 200, 60, {body_type = 'static'})
+    box = world:newRectangleCollider(400, 300, 50, 50, {collision_class = 'Ghost'}) 
+    ground = world:newRectangleCollider(400, 400, 200, 30, {body_type = 'static'})
 end
 
 function love.update(dt)

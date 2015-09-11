@@ -17,6 +17,8 @@ World.__index = World
 function hx.newWorld(settings)
     local world = hx.World.new(hx, settings)
 
+    world.box2d_world:setCallbacks(world.collisionOnEnter, world.collisionOnExit, world.collisionPre, world.collisionPost)
+    world:collisionClear()
     world:addCollisionClass('Default')
     world:collisionClassesSet()
 
@@ -30,10 +32,10 @@ function World.new(hx, settings)
 
     self.collision_classes = {}
     self.masks = {}
+    self.is_sensor_memo = {}
 
     love.physics.setMeter(32)
     self.box2d_world = love.physics.newWorld(settings.gravity_x or 0, settings.gravity_y or 0, settings.allow_sleeping) 
-    self.box2d_world:setCallbacks(self.collisionOnEnter, self.collisionOnExit, self.collisionPre, self.collisionPost)
 
     return setmetatable(self, World)
 end
@@ -77,6 +79,110 @@ end
 --- Sets all collision classes. This function must be called once after all collision classes have been added and before any collider is created.
 function World:collisionClassesSet()
     self:generateCategoriesMasks()
+
+    local collision_table = self:getCollisionCallbacksTable()
+    for collision_class_name, collision_list in pairs(collision_table) do
+        for _, collision_info in ipairs(collision_list) do
+            if collision_info.type == 'enter' then self:addCollisionEnter(collision_class_name, collision_info.other) end
+            if collision_info.type == 'exit' then self:addCollisionExit(collision_class_name, collision_info.other) end
+            if collision_info.type == 'pre' then self:addCollisionPre(collision_class_name, collision_info.other) end
+            if collision_info.type == 'post' then self:addCollisionPre(collision_class_name, collision_info.other) end
+        end
+    end
+end
+
+function World.collisionOnEnter(a, b, contact)
+
+end
+
+function World.collisionOnExit()
+    
+end
+
+function World.collisionPre()
+    
+end
+
+function World.collisionPost()
+    
+end
+
+function World:collisionClear()
+    self.collisions = {}
+    self.collisions.on_enter = {}
+    self.collisions.on_enter.sensor = {}
+    self.collisions.on_enter.non_sensor = {}
+    self.collisions.on_exit = {}
+    self.collisions.on_exit.sensor = {}
+    self.collisions.on_exit.non_sensor = {}
+    self.collisions.pre = {}
+    self.collisions.pre.sensor = {}
+    self.collisions.pre.non_sensor = {}
+    self.collisions.post = {}
+    self.collisions.post.sensor = {}
+    self.collisions.post.non_sensor = {}
+end
+
+function Collision:addCollisionEnter(type1, type2)
+    if not self:isCollisionBetweenSensors(type1, type2) then
+        table.insert(self.collisions.on_enter.non_sensor, {type1 = type1, type2 = type2})
+    else table.insert(self.collisions.on_enter.sensor, {type1 = type1, type2 = type2}) end
+end
+
+function Collision:addCollisionExit(type1, type2)
+    if not self:isCollisionBetweenSensors(type1, type2) then
+        table.insert(self.collisions.on_exit.non_sensor, {type1 = type1, type2 = type2})
+    else table.insert(self.collisions.on_exit.sensor, {type1 = type1, type2 = type2}) end
+end
+
+function Collision:addCollisionPre(type1, type2)
+    if not self:isCollisionBetweenSensors(type1, type2) then
+        table.insert(self.collisions.pre.non_sensor, {type1 = type1, type2 = type2})
+    else table.insert(self.collisions.pre.sensor, {type1 = type1, type2 = type2}) end
+end
+
+function Collision:addCollisionPost(type1, type2)
+    if not self:isCollisionBetweenSensors(type1, type2) then
+        table.insert(self.collisions.post.non_sensor, {type1 = type1, type2 = type2})
+    else table.insert(self.collisions.post.sensor, {type1 = type1, type2 = type2}) end
+end
+
+function World:doesType1IgnoreType2(type1, type2)
+    local collision_ignores = {}
+    for collision_class_name, collision_class in pairs(self.collision_classes) do
+        collision_ignores[collision_class_name] = collision_class.ignores or {}
+    end
+    local all = {}
+    for collision_class_name, _ in pairs(collision_ignores) do
+        table.insert(all, collision_class_name)
+    end
+    local ignored_types = {}
+    for _, collision_class_type in ipairs(collision_ignores[type1]) do
+        if collision_class_type == 'All' then
+            for _, collision_class_name in ipairs(all) do
+                table.insert(ignored_types, collision_class_name)
+            end
+        else table.insert(ignored_types, collision_class_type) end
+    end
+    for key, _ in pairs(collision_ignores[type1]) do
+        if key == 'except' then
+            for _, except_type in ipairs(collision_ignores[type1].except) do
+                for i = #ignored_types, 1, -1 do
+                    if ignored_types[i] == except_type then table.remove(ignored_types, i) end
+                end
+            end
+        end
+    end
+    for _, ignored_type in ipairs(ignored_types) do
+        if ignored_type == type2 then return true end
+    end
+end
+
+function World:isCollisionBetweenSensors(type1, type2)
+    if not self.is_sensor_memo[type1] then self.is_sensor_memo[type1] = {} end
+    if not self.is_sensor_memo[type1][type2] then self.is_sensor_memo[type1][type2] = (self:doesType1IgnoreType2(type1, type2) or self:doesType1IgnoreType2(type2, type1)) end
+    if self.is_sensor_memo[type1][type2] then return true
+    else return false end
 end
 
 function World:generateCategoriesMasks()
@@ -155,22 +261,6 @@ function World:generateCategoriesMasks()
         end
         self.masks[k] = {categories = category, masks = current_masks}
     end
-end
-
-function World.collisionOnEnter()
-    
-end
-
-function World.collisionOnExit()
-    
-end
-
-function World.collisionPre()
-    
-end
-
-function World.collisionPost()
-    
 end
 
 function World:getCollisionCallbacksTable()
