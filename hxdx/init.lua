@@ -1,28 +1,40 @@
-local path = ... .. '.'
-local hx = {}
-hx.Math = require(path .. 'mlib.mlib')
+local path = ... .. '.' local hx = {} hx.Math = require(path .. 'mlib.mlib') 
 
---- @class World
--- @description A World contains the [box2d world](https://www.love2d.org/wiki/World) as well as state for handling collision classes, methods for changing box2d world settings as well as methods for the creation of Colliders and Effectors.
-local World = {}
-World.__index = World
+--- @class World 
+-- @description A World contains the [box2d world](https://www.love2d.org/wiki/World) as well as state for handling collision classes, methods for changing box2d world settings as well as methods for the creation of Colliders and Effectors.  
+local World = {} 
+World.__index = World 
 
---- Creates a new World
+--- Creates a new World 
 -- @luastart 
--- @code physics_world = hx.newWorld()
--- @luaend
--- @arg {table=} settings - Table with optional settings for the world
+-- @code physics_world = hx.newWorld({gravity_y = 20})
+-- @luaend 
+-- @arg {table=} settings - Table with optional settings for the world:
+-- @setting {number=0} gravity_x - The world's x gravity component 
+-- @setting {number=0} gravity_y - The world's y gravity component
+-- @setting {boolean=true} allow_sleeping - If the world's bodies are allowed to sleep
 -- @returns {World}
 function hx.newWorld(settings)
     local world = hx.World.new(hx, settings)
+
     world:addCollisionClass('Default')
     world:collisionClassesSet()
+
     return world
 end
 
 function World.new(hx, settings)
     local self = {}
+    local settings = settings or {}
     self.hx = hx
+
+    self.collision_classes = {}
+    self.masks = {}
+
+    love.physics.setMeter(32)
+    self.box2d_world = love.physics.newWorld(settings.gravity_x or 0, settings.gravity_y or 0, settings.allow_sleeping) 
+    self.box2d_world:setCallbacks(self.collisionOnEnter, self.collisionOnExit, self.collisionPre, self.collisionPost)
+
     return setmetatable(self, World)
 end
 
@@ -32,7 +44,7 @@ end
 -- @luaend
 -- @arg {number} dt - Time step delta
 function World:update(dt)
-
+    self.box2d_world:update(dt)
 end
 
 --- Draws the World (for debugging purposes)
@@ -43,7 +55,7 @@ function World:draw()
 
 end
 
---- Creates a new collision class. Collision classes are attached to colliders and define collider behavior in tertms of which ones will be physically ignored and which ones will generate collision events between each other. All collision classes must be added **before** any collider is created. After all collision classes are added `collisionClassesSet` must be called once.
+--- Adds a new collision class to the world. Collision classes are attached to colliders and define collider behavior in terms of which ones will be physically ignored and which ones will generate collision events between each other. All collision classes must be added **before** any collider is created. After all collision classes are added `collisionClassesSet` must be called once.
 -- @luastart
 -- @code physics_world:addCollisionClass('Player', {
 -- @code                                 ignores = {'NPC', 'Enemy'}, 
@@ -58,12 +70,119 @@ end
 -- @setting {table[string]=} pre - The collision class names that will generate collision events right before collision response is applied 
 -- @setting {table[string]=} post - The collision class names that will generate collision events right after collision response is applied
 function World:addCollisionClass(collision_class_name, collision_class)
-    
+    if self.collision_classes[collision_class_name] then error('Collision class ' .. collision_class_name .. ' already exists.') end
+    self.collision_classes[collision_class_name] = collision_class or {}
 end
 
 --- Sets all collision classes. This function must be called once after all collision classes have been added and before any collider is created.
 function World:collisionClassesSet()
+    self:generateCategoriesMasks()
+end
+
+function World:generateCategoriesMasks()
+    local collision_ignores = {}
+    for collision_class_name, collision_class in pairs(self.collision_classes) do
+        collision_ignores[collision_class_name] = collision_class.ignores or {}
+    end
+    local incoming = {}
+    local expanded = {}
+    local all = {}
+    for object_type, _ in pairs(collision_ignores) do
+        incoming[object_type] = {}
+        expanded[object_type] = {}
+        table.insert(all, object_type)
+    end
+    for object_type, ignore_list in pairs(collision_ignores) do
+        for key, ignored_type in pairs(ignore_list) do
+            if ignored_type == 'All' then
+                for _, all_object_type in ipairs(all) do
+                    table.insert(incoming[all_object_type], object_type)
+                    table.insert(expanded[object_type], all_object_type)
+                end
+            elseif type(ignored_type) == 'string' then
+                if ignored_type ~= 'All' then
+                    table.insert(incoming[ignored_type], object_type)
+                    table.insert(expanded[object_type], ignored_type)
+                end
+            end
+            if key == 'except' then
+                for _, except_ignored_type in ipairs(ignored_type) do
+                    for i, v in ipairs(incoming[except_ignored_type]) do
+                        if v == object_type then
+                            table.remove(incoming[except_ignored_type], i)
+                            break
+                        end
+                    end
+                end
+                for _, except_ignored_type in ipairs(ignored_type) do
+                    for i, v in ipairs(expanded[object_type]) do
+                        if v == except_ignored_type then
+                            table.remove(expanded[object_type], i)
+                            break
+                        end
+                    end
+                end
+            end
+        end
+    end
+    local edge_groups = {}
+    for k, v in pairs(incoming) do
+        table.sort(v, function(a, b) return string.lower(a) < string.lower(b) end)
+    end
+    local i = 0
+    for k, v in pairs(incoming) do
+        local str = ""
+        for _, c in ipairs(v) do
+            str = str .. c
+        end
+        if not edge_groups[str] then i = i + 1; edge_groups[str] = {n = i} end
+        table.insert(edge_groups[str], k)
+    end
+    local categories = {}
+    for k, _ in pairs(collision_ignores) do
+        categories[k] = {}
+    end
+    for k, v in pairs(edge_groups) do
+        for i, c in ipairs(v) do
+            categories[c] = v.n
+        end
+    end
+    for k, v in pairs(expanded) do
+        local category = {categories[k]}
+        local current_masks = {}
+        for _, c in ipairs(v) do
+            table.insert(current_masks, categories[c])
+        end
+        self.masks[k] = {categories = category, masks = current_masks}
+    end
+end
+
+function World.collisionOnEnter()
     
+end
+
+function World.collisionOnExit()
+    
+end
+
+function World.collisionPre()
+    
+end
+
+function World.collisionPost()
+    
+end
+
+function World:getCollisionCallbacksTable()
+    local collision_table = {}
+    for collision_class_name, collision_class in pairs(self.collision_classes) do
+        collision_table[collision_class_name] = {}
+        for _, v in ipairs(collision_class.enter or {}) do table.insert(collision_table[collision_class_name], {type = 'enter', other = v}) end
+        for _, v in ipairs(collision_class.exit or {}) do table.insert(collision_table[collision_class_name], {type = 'exit', other = v}) end
+        for _, v in ipairs(collision_class.pre or {}) do table.insert(collision_table[collision_class_name], {type = 'pre', other = v}) end
+        for _, v in ipairs(collision_class.post or {}) do table.insert(collision_table[collision_class_name], {type = 'post', other = v}) end
+    end
+    return collision_table
 end
 
 --- Creates a new CircleCollider
@@ -215,39 +334,133 @@ function World:queryLine(x1, y1, x2, y2, collision_class_names)
     
 end
 
+--- Adds a joint to the world. A joint can be accessed via physics_world.joints[joint_name]
+-- @arg {string} joint_name - The unique name of the joint
+-- @arg {string} joint_type - The joint type, can be `'DistanceJoint'`, `'FrictionJoint'`, `'GearJoint'`, `'MouseJoint'`, `'PrismaticJoint'`, `'PulleyJoint'`, `'RevoluteJoint'`, `'RopeJoint'`, `'WeldJoint'` or `'WheelJoint'`
+-- @arg {*} ... - The joint creation arguments that are different for each joint type. Check [here](https://www.love2d.org/wiki/Joint) for more details
+-- @returns {Joint}
+function World:addJoint(joint_name, joint_type, ...)
+    if self.joints[joint_name] then error("Joint " .. joint_name .. " already exists.") end
+    local args = {...}
+    local joint = love.physics['new' .. joint_type](unpack(args))
+    self.joints[joint_name] = joint
+    return joint
+end
+
+--- Removes a joint from the world 
+-- @arg {string} joint_name - The unique name of the joint to be removed. Must be a name previously added with `addJoint`
+function World:removeJoint(joint_name)
+    
+end
+
 --- @class Collider 
 -- @description A collider is a box2d physics object (body + shape + fixture) that has a collision class and that can generate collision events.
 local Collider = {}
 Collider.__index = Collider
 
-function Collider.new(physics_world, collider_type, ...)
+function Collider.new(world, collider_type, ...)
     local self = {}
-    self.physics_world = physics_world
+    self.world = world
     self.type = collider_type
-    self.body = nil
+    self.shapes = {}
     self.fixtures = {}
     self.sensors = {}
-    self.shapes = {}
-    self.joints = {}
 
     local args = {...}
-    self.collision_class = args.collision_class or 'Default'
-
+    local shape, fixture
     if self.type == 'Circle' then
+        self.collision_class = (args[4] and args[4].collision_class) or 'Default'
+        self.body = love.physics.newBody(self.world.box2d_world, args[1], args[2], (args[4] and args[4].body_type) or 'dynamic')
+        self.body:setFixedRotation(true)
+        shape = love.physics.newCircleShape(args[3])
 
     elseif self.type == 'Rectangle' then
+        self.collision_class = (args[5] and args[5].collision_class) or 'Default'
+        self.body = love.physics.newBody(self.world.box2d_world, args[1], args[2], (args[5] and args[5].body_type) or 'dynamic')
+        self.body:setFixedRotation(true)
+        shape = love.physics.newRectangleShape(args[3], args[4])
 
     elseif self.type == 'BSGRectangle' then
+        self.collision_class = (args[6] and args[6].collision_class) or 'Default'
+        self.body = love.physics.newBody(self.world.box2d_world, args[1], args[2], (args[6] and args[6].body_type) or 'dynamic')
+        self.body:setFixedRotation(true)
+        local w, h, s = args[3], args[4], args[5]
+        shape = love.physics.newPolygonShape({
+            -w/2, -h/2 + s, -w/2 + s, -h/2,
+             w/2 - s, -h/2, w/2, -h/2 + s,
+             w/2, h/2 - s, w/2 - s, h/2,
+            -w/2 + s, h/2, -w/2, h/2 - s
+        })
 
     elseif self.type == 'Polygon' then
+        self.collision_class = (args[2] and args[2].collision_class) or 'Default'
+        local cx, cy = self.hx.Math.polygon.getCentroid(args[1])
+        self.body = love.physics.newBody(self.world.box2d_world, 0, 0, (args[2] and args[2].body_type) or 'dynamic')
+        self.body:setFixedRotation(true)
+        --[[
+        for i = 1, #args[1], 2 do
+            args[1][i] = args[1][i] - cx
+            args[1][i+1] = args[1][i+1] - cy
+        end
+        ]]--
+        shape = love.physics.newPolygonShape(unpack(args[1]))
 
     elseif self.type == 'Line' then
+        self.collision_class = (args[5] and args[5].collision_class) or 'Default'
+        local mx, my = self.hx.Math.line.getMidpoint(args[1], args[2], args[3], args[4])
+        self.body = love.physics.newBody(self.world.box2d_world, 0, 0, (args[5] and args[5].body_type) or 'dynamic')
+        self.body:setFixedRotation(true)
+        shape = love.physics.newEdgeShape(args[1], args[2], args[3], args[4])
 
     elseif self.type == 'Chain' then
-
+        self.collision_class = (args[3] and args[3].collision_class) or 'Default'
+        self.body = love.physics.newBody(self.world.box2d_world, 0, 0, (args[3] and args[3].body_type) or 'dynamic')
+        self.body:setFixedRotation(true)
+        shape = love.physics.newChainShape(args[2], args[1])
     end
 
+    -- Define collision classes and attach them to fixture and sensor
+    fixture = love.physics.newFixture(self.body, shape)
+    if self.world.masks[self.collision_class] then
+        fixture:setCategory(unpack(self.world.masks[self.collision_class].categories))
+        fixture:setMask(unpack(self.world.masks[self.collision_class].masks))
+    end
+    local sensor = love.physics.newFixture(self.body, shape)
+    sensor:setSensor(true)
+
+    self.shapes['main'] = shape
+    self.fixtures['main'] = fixture
+    self.sensors['main'] = sensor
+
     return setmetatable(self, Collider)
+end
+
+function Collider:update(dt)
+    
+end
+
+function Collider:draw()
+    for name, _ in pairs(self.shapes) do
+        if self.shapes[name]:type() == 'PolygonShape' then
+            love.graphics.setColor(r or 64, g or 128, b or 244)
+            love.graphics.polygon('line', self.body:getWorldPoints(self.shapes[name]:getPoints()))
+            love.graphics.setColor(255, 255, 255)
+
+        elseif self.shapes[name]:type() == 'EdgeShape' or self.shapes[name]:type() == 'ChainShape' then
+            love.graphics.setColor(r or 64, g or 128, b or 244)
+            local points = {self.body:getWorldPoints(self.shapes[name]:getPoints())}
+            for i = 1, #points, 2 do
+                if i < #points-2 then love.graphics.line(points[i], points[i+1], points[i+2], points[i+3]) end
+            end
+            love.graphics.setColor(255, 255, 255)
+
+        elseif self.shapes[name]:type() == 'CircleShape' then
+            love.graphics.setColor(r or 64, g or 128, b or 244)
+            local x, y, r = self.body:getPosition(), self.shapes[name]:getRadius()
+            love.graphics.circle('line', x, y, r, 360)
+            love.graphics.setColor(255, 255, 255)
+        end
+    end
 end
 
 --- Changes this collider's collision class. The new collision class must be a valid one previously added with `addCollisionClass`
@@ -323,32 +536,32 @@ function Collider:post(other_collision_class_name)
     
 end
 
---- Adds a joint to the collider. A joint can be accessed via collider.joints[joint_name]
--- @arg {string} joint_name - The unique name of the joint
--- @arg {string} joint_type - The joint type, can be 'DistanceJoint', 'FrictionJoint', 'GearJoint', 'MouseJoint', 'PrismaticJoint', 'PulleyJoint', 'RevoluteJoint', 'RopeJoint', 'WeldJoint' or 'WheelJoint'
--- @arg {*} ... - The joint creation arguments that are different for each joint type. Check [here](https://www.love2d.org/wiki/Joint) for more details
-function Collider:addJoint(joint_name, joint_type, ...)
-    
-end
-
 --- Adds a shape to the collider. A shape can be accessed via collider.shapes[shape_name]. A fixture of the same name is also added to attach the shape to the collider body. A fixture can be accessed via collider.fixtures[fixture_name]
 -- @arg {string} shape_name - The unique name of the shape
--- @arg {string} shape_type - The shape type, can be 'ChainShape', 'CircleShape', 'EdgeShape', 'PolygonShape' or 'RectangleShape'
+-- @arg {string} shape_type - The shape type, can be `'ChainShape'`, `'CircleShape'`, `'EdgeShape'`, `'PolygonShape'` or `'RectangleShape'`
 -- @arg {*} ... - The shape creation arguments that are different for each shape type. Check [here](https://www.love2d.org/wiki/Shape) for more details
 function Collider:addShape(shape_name, shape_type, ...)
-    
-end
+    if self.shapes[shape_name] or self.fixtures[shape_name] then error("Shape/fixture " .. shape_name .. " already exists.") end
+    local args = {...}
+    local shape = love.physics['new' .. shape_type](unpack(args))
+    local fixture = love.physics.newFixture(self.body, shape)
+    local sensor = love.physics.newFixture(self.body, shape)
+    sensor:setSensor(true)
 
---- Removes a joint from the collider
--- @arg {string} joint_name - The unique name of the joint to be removed. Must be a name previously added with `addJoint`
-function Collider:removeJoint(joint_name)
-    
+    self.shapes[shape_name] = shape
+    self.fixtures[shape_name] = fixture
+    self.sensors[shape_name] = sensor
 end
 
 --- Removes a shape from the collider (also removes the accompanying fixture)
 -- @arg {string} shape_name - The unique name of the shape to be removed. Must be a name previously added with `addShape`
 function Collider:removeShape(shape_name)
-    
+    if not self.shapes[shape_name] then return end
+    self.shapes[shape_name] = nil
+    self.fixtures[shape_name]:destroy()
+    self.fixtures[shape_name] = nil
+    self.sensors[shape_name]:destroy()
+    self.sensors[shape_name] = nil
 end
 
 hx.World = World
