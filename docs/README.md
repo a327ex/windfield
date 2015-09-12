@@ -6,7 +6,6 @@ hxdx
   - [update](#updatedt)
   - [draw](#draw)
   - [addCollisionClass](#addcollisionclasscollisionclassname-collisionclass)
-  - [collisionClassesSet](#collisionclassesset)
   - [newCircleCollider](#newcirclecolliderx-y-r-settings)
   - [newRectangleCollider](#newrectanglecolliderx-y-w-h-settings)
   - [newBSGRectangleCollider](#newbsgrectanglecolliderx-y-w-h-cornercutsize-settings)
@@ -17,14 +16,14 @@ hxdx
   - [queryRectangleArea](#queryrectangleareax-y-w-h-collisionclassnames)
   - [queryPolygonArea](#querypolygonareavertices-collisionclassnames)
   - [queryLine](#querylinex1-y1-x2-y2-collisionclassnames)
-  - [addJoint](#addjointjointname-jointtype-)
-  - [removeJoint](#removejointjointname)
+  - [addJoint](#addjointjointtype-)
+  - [removeJoint](#removejointjoint)
 - [Collider](#collider)
   - [changeCollisionClass](#changecollisionclasscollisionclassname)
   - [enter](#enterothercollisionclassname)
   - [exit](#exitothercollisionclassname)
-  - [pre](#preothercollisionclassname)
-  - [post](#postothercollisionclassname)
+  - [setPreSolve](#setpresolvecallback)
+  - [setPostSolve](#setpostsolvecallback)
   - [addShape](#addshapeshapename-shapetype-)
   - [removeShape](#removeshapeshapename)
   - [destroy](#destroy)
@@ -84,7 +83,7 @@ physics_world:draw()
 
 #### `:addCollisionClass(collision_class_name, collision_class)`
 
-Adds a new collision class to the world. Collision classes are attached to colliders and define collider behavior in terms of which ones will be physically ignored and which ones will generate collision events between each other. All collision classes must be added **before** any collider is created. After all collision classes are added `collisionClassesSet` must be called once. If `world.explicit_collision_events` is set to false (the default setting) then `enter`, `exit`, `pre` and `post` settings don't need to be specified (those events will be generated automatically for all existing collision classes).
+Adds a new collision class to the world. Collision classes are attached to colliders and define collider behavior in terms of which ones will be physically ignored and which ones will generate collision events between each other. All collision classes must be added before any collider is created. If `world.explicit_collision_events` is set to false (the default setting) then `enter`, `exit`, `pre` and `post` settings don't need to be specified (those events will be generated automatically for all existing collision classes).
 
 ```lua
 physics_world:addCollisionClass('Player', {
@@ -104,12 +103,6 @@ Settings:
 - `[exit]` `(table[string])` - The collision classes that will generate collision events when they exit contact
 - `[pre]` `(table[string])` - The collision classes that will generate collision events right before collision response is applied
 - `[post]` `(table[string])` - The collision classes that will generate collision events right after collision response is applied
-
----
-
-#### `:collisionClassesSet()`
-
-Sets all collision classes. This function must be called once after all collision classes have been added and before any collider is created.
 
 ---
 
@@ -349,13 +342,12 @@ Returns:
 
 ---
 
-#### `:addJoint(joint_name, joint_type, ...)`
+#### `:addJoint(joint_type, ...)`
 
-Adds a joint to the world. A joint can be accessed via physics_world.joints[joint_name]
+Adds a joint to the world.
 
 Arguments:
 
-- `joint_name` `(string)` - The unique name of the joint
 - `joint_type` `(string)` - The joint type, can be `'DistanceJoint'`, `'FrictionJoint'`, `'GearJoint'`, `'MouseJoint'`, `'PrismaticJoint'`, `'PulleyJoint'`, `'RevoluteJoint'`, `'RopeJoint'`, `'WeldJoint'` or `'WheelJoint'`
 - `...` `(*)` - The joint creation arguments that are different for each joint type. Check [here](https://www.love2d.org/wiki/Joint) for more details
 
@@ -365,13 +357,13 @@ Returns:
 
 ---
 
-#### `:removeJoint(joint_name)`
+#### `:removeJoint(joint)`
 
 Removes a joint from the world
 
 Arguments:
 
-- `joint_name` `(string)` - The unique name of the joint to be removed. Must be a name previously added with `addJoint`
+- `joint` `(Joint)` - The joint to be removed
 
 # Collider
 
@@ -438,30 +430,24 @@ Returns:
 
 ---
 
-#### `:pre(other_collision_class_name)`
+#### `:setPreSolve(callback)`
 
-Checks for collision events that happen right before collision response is applied
+Sets the preSolve callback. Unlike with `:enter` or `:exit` that can be delayed and checked after the physics simulation is done for this frame,  both preSolve and postSolve must be callbacks that are resolved immediately, since they may change how the rest of the simulation plays out on this frame.
 
 ```lua
-if collider:pre('Enemy') then
-  local _, enemy_collider = collider:pre('Enemy')
+collider:setPreSolve(function(collider, contact)
+  contact:setEnabled(false)
 end
 ```
 Arguments:
 
-- `other_collision_class_name` `(string)` - The unique name of the target collision class
-
-Returns:
-
-- `boolean` - If the enter collision event between both collision classes happened on this frame or not
-- `Collider` - The target Collider
-- `Contact` - The [Contact](https://www.love2d.org/wiki/Contact) object
+- `callback` `(function)` - The preSolve callback. Receives `collider_1`, `collider_2`, `contact` as arguments
 
 ---
 
-#### `:post(other_collision_class_name)`
+#### `:setPostSolve(callback)`
 
-Checks for collision events that happen right after collision response is applied
+Sets the postSolve callback. Unlike with `:enter` or `:exit` that can be delayed and checked after the physics simulation is done for this frame,  both preSolve and postSolve must be callbacks that are resolved immediately, since they may change how the rest of the simulation plays out on this frame.
 
 ```lua
 if collider:post('Enemy') then
@@ -470,17 +456,7 @@ end
 ```
 Arguments:
 
-- `other_collision_class_name` `(string)` - The unique name of the target collision class
-
-Returns:
-
-- `boolean` - If the enter collision event between both collision classes happened on this frame or not
-- `Collider` - The target Collider
-- `Contact` - The [Contact](https://www.love2d.org/wiki/Contact) object
-- `number` - The amount of impulse applied along the normal of the first point of collision
-- `number` - The amount of impulse applied along the tangent of the first point of collision
-- `number` - The amount of impulse applied along the normal of the second point of collision
-- `number` - The amount of impulse applied along the tangent of the second point of collision
+- `callback` `(function)` - The postSolve callback. Receives `collider_1`, `collider_2`, `contact`, `normal_impulse1`, `tangent_impulse1`, `normal_impulse2`, `tangent_impulse2` as arguments
 
 ---
 

@@ -38,7 +38,6 @@ function World.new(hx, settings)
     self.collision_classes = {}
     self.masks = {}
     self.is_sensor_memo = {}
-    self.collision_events = {}
     self.query_debug_draw = {}
 
     love.physics.setMeter(32)
@@ -53,7 +52,13 @@ end
 -- @luaend
 -- @arg {number} dt - Time step delta
 function World:update(dt)
-    self:collisionEventsClear()
+    -- Clear collision events from previous frame
+    local bodies = self.box2d_world:getBodyList()
+    for _, body in ipairs(bodies) do
+        local collider = body:getFixtureList()[1]:getUserData()
+        collider:collisionEventsClear()
+    end
+
     self.box2d_world:update(dt)
 end
 
@@ -87,6 +92,14 @@ function World:draw()
     love.graphics.setColor(255, 255, 255)
 
     -- Joint debug
+    love.graphics.setColor(64, 244, 128)
+    local joints = self.box2d_world:getJointList()
+    for _, joint in ipairs(joints) do
+        local x1, y1, x2, y2 = joint:getAnchors()
+        if x1 and y1 then love.graphics.circle('line', x1, y1, 2) end
+        if x2 and y2 then love.graphics.circle('line', x2, y2, 2) end
+    end
+    love.graphics.setColor(255, 255, 255)
 
     -- Query debug
     love.graphics.setColor(244, 128, 64)
@@ -141,6 +154,12 @@ function World:addCollisionClass(collision_class_name, collision_class)
             table.insert(self.collision_classes[collision_class_name].pre, c_class_name)
             table.insert(self.collision_classes[collision_class_name].post, c_class_name)
         end
+        for c_class_name, _ in pairs(self.collision_classes) do
+            table.insert(self.collision_classes[c_class_name].enter, collision_class_name)
+            table.insert(self.collision_classes[c_class_name].exit, collision_class_name)
+            table.insert(self.collision_classes[c_class_name].pre, collision_class_name)
+            table.insert(self.collision_classes[c_class_name].post, collision_class_name)
+        end
     end
 
     self:collisionClassesSet()
@@ -156,7 +175,7 @@ function World:collisionClassesSet()
             if collision_info.type == 'enter' then self:addCollisionEnter(collision_class_name, collision_info.other) end
             if collision_info.type == 'exit' then self:addCollisionExit(collision_class_name, collision_info.other) end
             if collision_info.type == 'pre' then self:addCollisionPre(collision_class_name, collision_info.other) end
-            if collision_info.type == 'post' then self:addCollisionPre(collision_class_name, collision_info.other) end
+            if collision_info.type == 'post' then self:addCollisionPost(collision_class_name, collision_info.other) end
         end
     end
 
@@ -363,9 +382,9 @@ function World.collisionOnEnter(fixture_a, fixture_b, contact)
             for _, collision in ipairs(world.collisions.on_enter.sensor) do
                 if collIf(collision.type1, collision.type2, a, b) then
                     a, b = collEnsure(collision.type1, a, collision.type2, b)
-                    table.insert(world.collision_events[collision.type1][collision.type2], {collision_type = 'enter', collider_1 = a, collider_2 = b, contact = contact})
+                    table.insert(a.collision_events[collision.type2], {collision_type = 'enter', collider_1 = a, collider_2 = b, contact = contact})
                     if collision.type1 == collision.type2 then 
-                        table.insert(world.collision_events[collision.type2][collision.type1], {collision_type = 'enter', collider_1 = b, collider_2 = a, contact = contact})
+                        table.insert(b.collision_events[collision.type1], {collision_type = 'enter', collider_1 = b, collider_2 = a, contact = contact})
                     end
                 end
             end
@@ -376,9 +395,9 @@ function World.collisionOnEnter(fixture_a, fixture_b, contact)
             for _, collision in ipairs(world.collisions.on_enter.non_sensor) do
                 if collIf(collision.type1, collision.type2, a, b) then
                     a, b = collEnsure(collision.type1, a, collision.type2, b)
-                    table.insert(world.collision_events[collision.type1][collision.type2], {collision_type = 'enter', collider_1 = a, collider_2 = b, contact = contact})
+                    table.insert(a.collision_events[collision.type2], {collision_type = 'enter', collider_1 = a, collider_2 = b, contact = contact})
                     if collision.type1 == collision.type2 then 
-                        table.insert(world.collision_events[collision.type2][collision.type1], {collision_type = 'enter', collider_1 = b, collider_2 = a, contact = contact})
+                        table.insert(b.collision_events[collision.type1], {collision_type = 'enter', collider_1 = b, collider_2 = a, contact = contact})
                     end
                 end
             end
@@ -395,9 +414,9 @@ function World.collisionOnExit(fixture_a, fixture_b, contact)
             for _, collision in ipairs(world.collisions.on_exit.sensor) do
                 if collIf(collision.type1, collision.type2, a, b) then
                     a, b = collEnsure(collision.type1, a, collision.type2, b)
-                    table.insert(world.collision_events[collision.type1][collision.type2], {collision_type = 'exit', collider_1 = a, collider_2 = b, contact = contact})
+                    table.insert(a.collision_events[collision.type2], {collision_type = 'exit', collider_1 = a, collider_2 = b, contact = contact})
                     if collision.type1 == collision.type2 then 
-                        table.insert(world.collision_events[collision.type2][collision.type1], {collision_type = 'exit', collider_1 = b, collider_2 = a, contact = contact})
+                        table.insert(b.collision_events[collision.type1], {collision_type = 'exit', collider_1 = b, collider_2 = a, contact = contact})
                     end
                 end
             end
@@ -427,9 +446,9 @@ function World.collisionPre(fixture_a, fixture_b, contact)
             for _, collision in ipairs(world.collisions.pre.sensor) do
                 if collIf(collision.type1, collision.type2, a, b) then
                     a, b = collEnsure(collision.type1, a, collision.type2, b)
-                    table.insert(world.collision_events[collision.type1][collision.type2], {collision_type = 'pre', collider_1 = a, collider_2 = b, contact = contact})
+                    a:preSolve(b, contact)
                     if collision.type1 == collision.type2 then 
-                        table.insert(world.collision_events[collision.type2][collision.type1], {collision_type = 'pre', collider_1 = b, collider_2 = a, contact = contact})
+                        b:preSolve(a, contact)
                     end
                 end
             end
@@ -440,9 +459,9 @@ function World.collisionPre(fixture_a, fixture_b, contact)
             for _, collision in ipairs(world.collisions.pre.non_sensor) do
                 if collIf(collision.type1, collision.type2, a, b) then
                     a, b = collEnsure(collision.type1, a, collision.type2, b)
-                    table.insert(world.collision_events[collision.type1][collision.type2], {collision_type = 'pre', collider_1 = a, collider_2 = b, contact = contact})
+                    a:preSolve(b, contact)
                     if collision.type1 == collision.type2 then 
-                        table.insert(world.collision_events[collision.type2][collision.type1], {collision_type = 'pre', collider_1 = b, collider_2 = a, contact = contact})
+                        b:preSolve(a, contact)
                     end
                 end
             end
@@ -459,11 +478,9 @@ function World.collisionPost(fixture_a, fixture_b, contact, ni1, ti1, ni2, ti2)
             for _, collision in ipairs(world.collisions.post.sensor) do
                 if collIf(collision.type1, collision.type2, a, b) then
                     a, b = collEnsure(collision.type1, a, collision.type2, b)
-                    table.insert(world.collision_events[collision.type1][collision.type2], {collision_type = 'post', collider_1 = a, collider_2 = b, contact = contact, 
-                                                                                            ni1 = ni1, ti1 = ti1, ni2 = ni2, ti2 = ti2})
+                    a:postSolve(b, contact, ni1, ti1, ni2, ti2)
                     if collision.type1 == collision.type2 then 
-                        table.insert(world.collision_events[collision.type1][collision.type2], {collision_type = 'post', collider_1 = b, collider_2 = a, contact = contact, 
-                                                                                                ni1 = ni1, ti1 = ti1, ni2 = ni2, ti2 = ti2})
+                        b:postSolve(a, contact, ni1, ti1, ni2, ti2)
                     end
                 end
             end
@@ -474,11 +491,9 @@ function World.collisionPost(fixture_a, fixture_b, contact, ni1, ti1, ni2, ti2)
             for _, collision in ipairs(world.collisions.post.non_sensor) do
                 if collIf(collision.type1, collision.type2, a, b) then
                     a, b = collEnsure(collision.type1, a, collision.type2, b)
-                    table.insert(world.collision_events[collision.type1][collision.type2], {collision_type = 'post', collider_1 = a, collider_2 = b, contact = contact, 
-                                                                                            ni1 = ni1, ti1 = ti1, ni2 = ni2, ti2 = ti2})
+                    a:postSolve(b, contact, ni1, ti1, ni2, ti2)
                     if collision.type1 == collision.type2 then 
-                        table.insert(world.collision_events[collision.type1][collision.type2], {collision_type = 'post', collider_1 = b, collider_2 = a, contact = contact, 
-                                                                                                ni1 = ni1, ti1 = ti1, ni2 = ni2, ti2 = ti2})
+                        b:postSolve(a, contact, ni1, ti1, ni2, ti2)
                     end
                 end
             end
@@ -738,25 +753,20 @@ function World:queryLine(x1, y1, x2, y2, collision_class_names)
     return outs
 end
 
---- Adds a joint to the world. A joint can be accessed via physics_world.joints[joint_name]
--- @arg {string} joint_name - The unique name of the joint
+--- Adds a joint to the world.
 -- @arg {string} joint_type - The joint type, can be `'DistanceJoint'`, `'FrictionJoint'`, `'GearJoint'`, `'MouseJoint'`, `'PrismaticJoint'`, `'PulleyJoint'`, `'RevoluteJoint'`, `'RopeJoint'`, `'WeldJoint'` or `'WheelJoint'`
 -- @arg {*} ... - The joint creation arguments that are different for each joint type. Check [here](https://www.love2d.org/wiki/Joint) for more details
 -- @returns {Joint}
-function World:addJoint(joint_name, joint_type, ...)
-    if self.joints[joint_name] then error("Joint " .. joint_name .. " already exists.") end
+function World:addJoint(joint_type, ...)
     local args = {...}
     local joint = love.physics['new' .. joint_type](unpack(args))
-    self.joints[joint_name] = joint
     return joint
 end
 
 --- Removes a joint from the world 
--- @arg {string} joint_name - The unique name of the joint to be removed. Must be a name previously added with `addJoint`
-function World:removeJoint(joint_name)
-    if not self.joints[joint_name] then error("Joint " .. joint_name .. " doesn't exist.") end
-    self.joints[joint_name]:destroy()
-    self.joints[joint_name] = nil
+-- @arg {Joint} joint - The joint to be removed
+function World:removeJoint(joint)
+    joint:destroy()
 end
 
 --- @class Collider 
@@ -771,6 +781,7 @@ function Collider.new(world, collider_type, ...)
     self.shapes = {}
     self.fixtures = {}
     self.sensors = {}
+    self.collision_events = {}
 
     local args = {...}
     local shape, fixture
@@ -831,8 +842,18 @@ function Collider.new(world, collider_type, ...)
     self.shapes['main'] = shape
     self.fixtures['main'] = fixture
     self.sensors['main'] = sensor
+    
+    self.preSolve = function() end
+    self.postSolve = function() end
 
     return setmetatable(self, Collider)
+end
+
+function Collider:collisionEventsClear()
+    self.collision_events = {}
+    for other, _ in pairs(self.world.collision_classes) do
+        self.collision_events[other] = {}
+    end
 end
 
 --- Changes this collider's collision class. The new collision class must be a valid one previously added with `addCollisionClass`
@@ -866,7 +887,7 @@ end
 -- @returns {Collider} The target Collider
 -- @returns {Contact} The [Contact](https://www.love2d.org/wiki/Contact) object
 function Collider:enter(other_collision_class_name)
-    local events = self.world.collision_events[self.collision_class][other_collision_class_name]
+    local events = self.collision_events[other_collision_class_name]
     if #events >= 1  then
         for _, e in ipairs(events) do
             if e.collision_type == 'enter' then
@@ -887,7 +908,7 @@ end
 -- @returns {Collider} The target Collider
 -- @returns {Contact} The [Contact](https://www.love2d.org/wiki/Contact) object
 function Collider:exit(other_collision_class_name)
-    local events = self.world.collision_events[self.collision_class][other_collision_class_name]
+    local events = self.collision_events[other_collision_class_name]
     if #events >= 1  then
         for _, e in ipairs(events) do
             if e.collision_type == 'exit' then
@@ -897,50 +918,28 @@ function Collider:exit(other_collision_class_name)
     end
 end
 
---- Checks for collision events that happen right before collision response is applied
+--- Sets the preSolve callback. Unlike with `:enter` or `:exit` that can be delayed and checked after the physics simulation is done for this frame, 
+-- both preSolve and postSolve must be callbacks that are resolved immediately, since they may change how the rest of the simulation plays out on this frame.
 -- @luastart
--- @code if collider:pre('Enemy') then
--- @code   local _, enemy_collider = collider:pre('Enemy')
+-- @code collider:setPreSolve(function(collider, contact)
+-- @code   contact:setEnabled(false)
 -- @code end
 -- @luaend
--- @arg {string} other_collision_class_name - The unique name of the target collision class
--- @returns {boolean} If the enter collision event between both collision classes happened on this frame or not
--- @returns {Collider} The target Collider
--- @returns {Contact} The [Contact](https://www.love2d.org/wiki/Contact) object
-function Collider:pre(other_collision_class_name)
-    local events = self.world.collision_events[self.collision_class][other_collision_class_name]
-    if #events >= 1  then
-        for _, e in ipairs(events) do
-            if e.collision_type == 'pre' then
-                return true, e.collider_2, e.contact
-            end
-        end
-    end
+-- @arg {function} callback - The preSolve callback. Receives `collider_1`, `collider_2`, `contact` as arguments
+function Collider:setPreSolve(callback)
+    self.preSolve = callback
 end
 
---- Checks for collision events that happen right after collision response is applied
+--- Sets the postSolve callback. Unlike with `:enter` or `:exit` that can be delayed and checked after the physics simulation is done for this frame, 
+-- both preSolve and postSolve must be callbacks that are resolved immediately, since they may change how the rest of the simulation plays out on this frame.
 -- @luastart
 -- @code if collider:post('Enemy') then
 -- @code   local _, enemy_collider, _, ni1, ti1, ni2, ti2 = collider:post('Enemy')
 -- @code end
 -- @luaend
--- @arg {string} other_collision_class_name - The unique name of the target collision class
--- @returns {boolean} If the enter collision event between both collision classes happened on this frame or not
--- @returns {Collider} The target Collider
--- @returns {Contact} The [Contact](https://www.love2d.org/wiki/Contact) object
--- @returns {number} The amount of impulse applied along the normal of the first point of collision
--- @returns {number} The amount of impulse applied along the tangent of the first point of collision
--- @returns {number} The amount of impulse applied along the normal of the second point of collision
--- @returns {number} The amount of impulse applied along the tangent of the second point of collision
-function Collider:post(other_collision_class_name)
-    local events = self.world.collision_events[self.collision_class][other_collision_class_name]
-    if #events >= 1  then
-        for _, e in ipairs(events) do
-            if e.collision_type == 'post' then
-                return true, e.collider_2, e.contact, e.ni1, e.ti1, e.ni2, e.ti2
-            end
-        end
-    end
+-- @arg {function} callback - The postSolve callback. Receives `collider_1`, `collider_2`, `contact`, `normal_impulse1`, `tangent_impulse1`, `normal_impulse2`, `tangent_impulse2` as arguments
+function Collider:setPostSolve(callback)
+    self.postSolve = callback
 end
 
 --- Adds a shape to the collider. A shape can be accessed via collider.shapes[shape_name]. A fixture of the same name is also added to attach the shape to the collider body. A fixture can be accessed via collider.fixtures[fixture_name]
