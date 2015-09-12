@@ -427,9 +427,9 @@ function World.collisionOnExit(fixture_a, fixture_b, contact)
             for _, collision in ipairs(world.collisions.on_exit.non_sensor) do
                 if collIf(collision.type1, collision.type2, a, b) then
                     a, b = collEnsure(collision.type1, a, collision.type2, b)
-                    table.insert(world.collision_events[collision.type1][collision.type2], {collision_type = 'exit', collider_1 = a, collider_2 = b, contact = contact})
+                    table.insert(a.collision_events[collision.type2], {collision_type = 'exit', collider_1 = a, collider_2 = b, contact = contact})
                     if collision.type1 == collision.type2 then 
-                        table.insert(world.collision_events[collision.type2][collision.type1], {collision_type = 'exit', collider_1 = b, collider_2 = a, contact = contact})
+                        table.insert(b.collision_events[collision.type1], {collision_type = 'exit', collider_1 = b, collider_2 = a, contact = contact})
                     end
                 end
             end
