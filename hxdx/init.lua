@@ -52,13 +52,8 @@ end
 -- @luaend
 -- @arg {number} dt - Time step delta
 function World:update(dt)
-    -- Clear collision events from previous frame
-    local bodies = self.box2d_world:getBodyList()
-    for _, body in ipairs(bodies) do
-        local collider = body:getFixtureList()[1]:getUserData()
-        collider:collisionEventsClear()
-    end
 
+    self:collisionEventsClear()
     self.box2d_world:update(dt)
 end
 
@@ -199,12 +194,10 @@ function World:collisionClear()
 end
 
 function World:collisionEventsClear()
-    self.collision_events = {}
-    for type1, _ in pairs(self.collision_classes) do
-        self.collision_events[type1] = {}
-        for type2, _ in pairs(self.collision_classes) do
-            self.collision_events[type1][type2] = {}
-        end
+    local bodies = self.box2d_world:getBodyList()
+    for _, body in ipairs(bodies) do
+        local collider = body:getFixtureList()[1]:getUserData()
+        collider:collisionEventsClear()
     end
 end
 
