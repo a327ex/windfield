@@ -30,9 +30,8 @@ function love.load()
 end
 
 function love.draw()
-  -- Colliders can be drawn for debugging purposes
-  box:draw()
-  ground:draw()
+  -- The world can be drawn for debugging purposes
+  world:draw()
 end
 ```
 
@@ -44,7 +43,6 @@ function love.load()
   -- By default colliders belong to the collision class 'Default'
   -- So in this case the box will physically ignore the ground and go through it
   world:addCollisionClass('Ghost', ignores = {'Default'})
-  world:collisionClassesSet()
 
   box = world:newRectangleCollider(400, 300, 50, 50, {collision_class = 'Ghost'})
   ground = world:newRectangleCollider(400, 400, 200, 30, {body_type = 'static'})
@@ -62,13 +60,46 @@ function love.update(dt)
 end
 ```
 
+### Query the world
+
+```lua
+function love.load()
+  world = hx.newWorld({gravity_y = 400})
+
+  box_1 = world:newRectangleCollider(375, 100, 50, 50)
+  box_1.body:setFixedRotation(false)
+  box_2 = world:newRectangleCollider(375, 200, 50, 50)
+  box_2.body:setFixedRotation(false)
+  box_3 = world:newRectangleCollider(375, 300, 50, 50)
+  box_3.body:setFixedRotation(false)
+end
+
+function love.update(dt)
+  world:update(dt)
+end
+
+function love.draw()
+  world:draw()
+end
+
+function love.keypressed(key)
+  if key == 'space' then
+    local colliders = world:queryCircleArea(400, 320, 50)
+    for _, collider in ipairs(colliders) do
+      collider.body:applyLinearImpulse(500, 0)
+    end
+  end
+end
+
+```
+
 ## Examples
 
-[EXAMPLES](https://github.com/adonaac/hxdx/tree/master/examples)
+[Examples](https://github.com/adonaac/hxdx/tree/master/examples)
 
 ## Documentation
 
-[DOCUMENTATION](https://github.com/adonaac/hxdx/blob/master/docs/README.md)
+[Documentation](https://github.com/adonaac/hxdx/blob/master/docs/README.md)
 
 ## LICENSE
 

@@ -1,4 +1,3 @@
-package.path = package.path .. ";C:\\Users\\Felipe\\dev\\hxdx\\?\\init.lua;C:\\Users\\Felipe\\dev\\hxdx\\?.lua"
 hx = require('hxdx')
 
 -- There are two ways of doing this: 
