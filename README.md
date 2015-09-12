@@ -36,6 +36,10 @@ function love.draw()
 end
 ```
 
+<p align="center">
+<img src="http://i.imgur.com/vYYcfbH.gif"/>
+</p>
+
 ### Add collision classes
 
 ```lua
@@ -51,6 +55,10 @@ function love.load()
 end
 ```
 
+<p align="center">
+<img src="http://i.imgur.com/0toUgjS.gif"/>
+</p>
+
 ### Capture collision events
 
 ```lua
@@ -62,6 +70,18 @@ function love.update(dt)
 end
 ```
 
+<p align="center">
+<img src="http://i.imgur.com/eaKVMfP.gif"/>
+</p>
+
 ## Examples
 
+[EXAMPLES](https://github.com/adonaac/hxdx/tree/master/examples)
+
 ## Documentation
+
+[DOCUMENTATION](https://github.com/adonaac/hxdx/blob/master/docs/README.md)
+
+## LICENSE
+
+You can do whatever you want with this. See the [LICENSE](https://github.com/adonaac/hxdx/blob/master/LICENSE).
