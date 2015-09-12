@@ -13,6 +13,14 @@ end
 
 function love.update(dt)
     world:update(dt)
+
+    if box:enter('Default') then
+        print(1)
+    end
+
+    if box:exit('Default') then
+        print(2)
+    end
 end
 
 function love.draw()
