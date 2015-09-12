@@ -17,15 +17,15 @@ hxdx
   - [queryRectangleArea](#queryrectangleareax-y-w-h-collisionclassnames)
   - [queryPolygonArea](#querypolygonareavertices-collisionclassnames)
   - [queryLine](#querylinex1-y1-x2-y2-collisionclassnames)
+  - [addJoint](#addjointjointname-jointtype-)
+  - [removeJoint](#removejointjointname)
 - [Collider](#collider)
   - [changeCollisionClass](#changecollisionclasscollisionclassname)
   - [enter](#enterothercollisionclassname)
   - [exit](#exitothercollisionclassname)
   - [pre](#preothercollisionclassname)
   - [post](#postothercollisionclassname)
-  - [addJoint](#addjointjointname-jointtype-)
   - [addShape](#addshapeshapename-shapetype-)
-  - [removeJoint](#removejointjointname)
   - [removeShape](#removeshapeshapename)
 
 # World
@@ -39,11 +39,17 @@ A World contains the [box2d world](https://www.love2d.org/wiki/World) as well as
 Creates a new World
 
 ```lua
-physics_world = hx.newWorld()
+physics_world = hx.newWorld({gravity_y = 20})
 ```
 Arguments:
 
-- `[settings]` `(table)` - Table with optional settings for the world
+- `[settings]` `(table)` - Table with optional settings for the world:
+
+Settings:
+
+- `[gravity_x=0]` `(number)` - The world's x gravity component
+- `[gravity_y=0]` `(number)` - The world's y gravity component
+- `[allow_sleeping=true]` `(boolean)` - If the world's bodies are allowed to sleep
 
 Returns:
 
@@ -75,7 +81,7 @@ physics_world:draw()
 
 #### `:addCollisionClass(collision_class_name, collision_class)`
 
-Creates a new collision class. Collision classes are attached to colliders and define collider behavior in tertms of which ones will be physically ignored and which ones will generate collision events between each other. All collision classes must be added **before** any collider is created. After all collision classes are added `collisionClassesSet` must be called once.
+Adds a new collision class to the world. Collision classes are attached to colliders and define collider behavior in terms of which ones will be physically ignored and which ones will generate collision events between each other. All collision classes must be added **before** any collider is created. After all collision classes are added `collisionClassesSet` must be called once.
 
 ```lua
 physics_world:addCollisionClass('Player', {
@@ -322,6 +328,32 @@ Arguments:
 - `y2` `(number)` - The final y position of the line
 - `[collision_class_names='All']` `(table[string])` - A table of strings with collision class names to be queried. The special value `'All'` (default) can be used to query for all existing collision class names. Another special value (a table of collision class names) `except` can be used to exclude some collision class names when `'All'` is used.
 
+---
+
+#### `:addJoint(joint_name, joint_type, ...)`
+
+Adds a joint to the world. A joint can be accessed via physics_world.joints[joint_name]
+
+Arguments:
+
+- `joint_name` `(string)` - The unique name of the joint
+- `joint_type` `(string)` - The joint type, can be `'DistanceJoint'`, `'FrictionJoint'`, `'GearJoint'`, `'MouseJoint'`, `'PrismaticJoint'`, `'PulleyJoint'`, `'RevoluteJoint'`, `'RopeJoint'`, `'WeldJoint'` or `'WheelJoint'`
+- `...` `(*)` - The joint creation arguments that are different for each joint type. Check [here](https://www.love2d.org/wiki/Joint) for more details
+
+Returns:
+
+- `Joint` - 
+
+---
+
+#### `:removeJoint(joint_name)`
+
+Removes a joint from the world
+
+Arguments:
+
+- `joint_name` `(string)` - The unique name of the joint to be removed. Must be a name previously added with `addJoint`
+
 # Collider
 
 A collider is a box2d physics object (body + shape + fixture) that has a collision class and that can generate collision events.
@@ -433,18 +465,6 @@ Returns:
 
 ---
 
-#### `:addJoint(joint_name, joint_type, ...)`
-
-Adds a joint to the collider. A joint can be accessed via collider.joints[joint_name]
-
-Arguments:
-
-- `joint_name` `(string)` - The unique name of the joint
-- `joint_type` `(string)` - The joint type, can be 'DistanceJoint', 'FrictionJoint', 'GearJoint', 'MouseJoint', 'PrismaticJoint', 'PulleyJoint', 'RevoluteJoint', 'RopeJoint', 'WeldJoint' or 'WheelJoint'
-- `...` `(*)` - The joint creation arguments that are different for each joint type. Check [here](https://www.love2d.org/wiki/Joint) for more details
-
----
-
 #### `:addShape(shape_name, shape_type, ...)`
 
 Adds a shape to the collider. A shape can be accessed via collider.shapes[shape_name]. A fixture of the same name is also added to attach the shape to the collider body. A fixture can be accessed via collider.fixtures[fixture_name]
@@ -452,18 +472,8 @@ Adds a shape to the collider. A shape can be accessed via collider.shapes[shape_
 Arguments:
 
 - `shape_name` `(string)` - The unique name of the shape
-- `shape_type` `(string)` - The shape type, can be 'ChainShape', 'CircleShape', 'EdgeShape', 'PolygonShape' or 'RectangleShape'
+- `shape_type` `(string)` - The shape type, can be `'ChainShape'`, `'CircleShape'`, `'EdgeShape'`, `'PolygonShape'` or `'RectangleShape'`
 - `...` `(*)` - The shape creation arguments that are different for each shape type. Check [here](https://www.love2d.org/wiki/Shape) for more details
-
----
-
-#### `:removeJoint(joint_name)`
-
-Removes a joint from the collider
-
-Arguments:
-
-- `joint_name` `(string)` - The unique name of the joint to be removed. Must be a name previously added with `addJoint`
 
 ---
 

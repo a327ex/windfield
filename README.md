@@ -54,21 +54,10 @@ end
 ### Capture collision events
 
 ```lua
-function love.load()
-  ...
-  -- Even though the 'Ghost' collision class physically ignores 'Default'
-  -- They can still generate collision events when a collision happens between them
-  -- In this case when a 'Ghost' collider enters collision with a 'Default' collider
-  -- a collision event will be generated and can be captured in the update function.
-  world:addCollisionClass('Ghost', ignores = {'Default'}, enter = {'Default'})
-  world:collisionClassesSet()
-  ...
-end
-
 function love.update(dt)
   ...
   if box:enter('Default') then
-    box.body:applyLinearImpulse(0, -500)
+    box.body:applyLinearImpulse(0, -5000)
   end
 end
 ```

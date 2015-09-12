@@ -15,11 +15,7 @@ function love.update(dt)
     world:update(dt)
 
     if box:enter('Default') then
-        print(1)
-    end
-
-    if box:exit('Default') then
-        print(2)
+        box.body:applyLinearImpulse(0, -5000)
     end
 end
 
