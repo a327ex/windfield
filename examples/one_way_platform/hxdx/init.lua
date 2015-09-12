@@ -52,13 +52,8 @@ end
 -- @luaend
 -- @arg {number} dt - Time step delta
 function World:update(dt)
-    -- Clear collision events from previous frame
-    local bodies = self.box2d_world:getBodyList()
-    for _, body in ipairs(bodies) do
-        local collider = body:getFixtureList()[1]:getUserData()
-        collider:collisionEventsClear()
-    end
 
+    self:collisionEventsClear()
     self.box2d_world:update(dt)
 end
 
@@ -199,12 +194,10 @@ function World:collisionClear()
 end
 
 function World:collisionEventsClear()
-    self.collision_events = {}
-    for type1, _ in pairs(self.collision_classes) do
-        self.collision_events[type1] = {}
-        for type2, _ in pairs(self.collision_classes) do
-            self.collision_events[type1][type2] = {}
-        end
+    local bodies = self.box2d_world:getBodyList()
+    for _, body in ipairs(bodies) do
+        local collider = body:getFixtureList()[1]:getUserData()
+        collider:collisionEventsClear()
     end
 end
 
@@ -427,9 +420,9 @@ function World.collisionOnExit(fixture_a, fixture_b, contact)
             for _, collision in ipairs(world.collisions.on_exit.non_sensor) do
                 if collIf(collision.type1, collision.type2, a, b) then
                     a, b = collEnsure(collision.type1, a, collision.type2, b)
-                    table.insert(world.collision_events[collision.type1][collision.type2], {collision_type = 'exit', collider_1 = a, collider_2 = b, contact = contact})
+                    table.insert(a.collision_events[collision.type2], {collision_type = 'exit', collider_1 = a, collider_2 = b, contact = contact})
                     if collision.type1 == collision.type2 then 
-                        table.insert(world.collision_events[collision.type2][collision.type1], {collision_type = 'exit', collider_1 = b, collider_2 = a, contact = contact})
+                        table.insert(b.collision_events[collision.type1], {collision_type = 'exit', collider_1 = b, collider_2 = a, contact = contact})
                     end
                 end
             end
@@ -921,7 +914,7 @@ end
 --- Sets the preSolve callback. Unlike with `:enter` or `:exit` that can be delayed and checked after the physics simulation is done for this frame, 
 -- both preSolve and postSolve must be callbacks that are resolved immediately, since they may change how the rest of the simulation plays out on this frame.
 -- @luastart
--- @code collider:setPreSolve(function(collider, contact)
+-- @code collider:setPreSolve(function(collider_1, collider_2, contact)
 -- @code   contact:setEnabled(false)
 -- @code end
 -- @luaend
@@ -933,8 +926,8 @@ end
 --- Sets the postSolve callback. Unlike with `:enter` or `:exit` that can be delayed and checked after the physics simulation is done for this frame, 
 -- both preSolve and postSolve must be callbacks that are resolved immediately, since they may change how the rest of the simulation plays out on this frame.
 -- @luastart
--- @code if collider:post('Enemy') then
--- @code   local _, enemy_collider, _, ni1, ti1, ni2, ti2 = collider:post('Enemy')
+-- @code collider:setPreSolve(function(collider_1, collider_2, contact, ni1, ti1, ni2, ti2)
+-- @code   contact:setEnabled(false)
 -- @code end
 -- @luaend
 -- @arg {function} callback - The postSolve callback. Receives `collider_1`, `collider_2`, `contact`, `normal_impulse1`, `tangent_impulse1`, `normal_impulse2`, `tangent_impulse2` as arguments
