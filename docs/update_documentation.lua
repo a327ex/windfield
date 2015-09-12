@@ -29,7 +29,7 @@ for _, comment in ipairs(comments) do
 
     local name = comment.context:match('function.-[:%.]([^%(]+)')
 
-    io.write('  - [' .. name .. '](#' .. context:gsub('[^%w%s]+', ''):gsub(' ', '-'):lower() .. ')\n')
+    io.write('  - [' .. name .. '](#' .. context:gsub('[^%w%s_]+', ''):gsub(' ', '-'):lower() .. ')\n')
   end
 end
 
