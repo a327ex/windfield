@@ -36,10 +36,6 @@ function love.draw()
 end
 ```
 
-<p align="center">
-<img src="http://i.imgur.com/vYYcfbH.gif"/>
-</p>
-
 ### Add collision classes
 
 ```lua
@@ -55,10 +51,6 @@ function love.load()
 end
 ```
 
-<p align="center">
-<img src="http://i.imgur.com/0toUgjS.gif"/>
-</p>
-
 ### Capture collision events
 
 ```lua
@@ -69,10 +61,6 @@ function love.update(dt)
   end
 end
 ```
-
-<p align="center">
-<img src="http://i.imgur.com/eaKVMfP.gif"/>
-</p>
 
 ## Examples
 
