@@ -13,6 +13,8 @@ World.__index = World
 -- @setting {number=0} gravity_x - The world's x gravity component 
 -- @setting {number=0} gravity_y - The world's y gravity component
 -- @setting {boolean=true} allow_sleeping - If the world's bodies are allowed to sleep
+-- @setting {boolean=false} explicit_collision_events - If the collision classes added to this world will automatically generate collision events for all other collision classes they collide with or if this has to be specified manually
+-- @setting {number=60} draw_query_for_n_frames - Number of frames a query is drawn for when debugging
 -- @returns {World}
 function hx.newWorld(settings)
     local world = hx.World.new(hx, settings)
@@ -31,10 +33,12 @@ function World.new(hx, settings)
     self.hx = hx
 
     self.explicit_collision_events = settings.explicit_collision_events
+    self.draw_query_for_n_frames = settings.draw_query_for_n_frames or 60
     self.collision_classes = {}
     self.masks = {}
     self.is_sensor_memo = {}
     self.collision_events = {}
+    self.query_debug_draw = {}
 
     love.physics.setMeter(32)
     self.box2d_world = love.physics.newWorld(settings.gravity_x or 0, settings.gravity_y or 0, settings.allow_sleeping) 
@@ -52,15 +56,61 @@ function World:update(dt)
     self.box2d_world:update(dt)
 end
 
---- Draws the World (for debugging purposes)
+--- Draws the World, drawing all colliders, joints and world queries (for debugging purposes)
 -- @luastart
 -- @code physics_world:draw()
 -- @luaend
 function World:draw()
+    -- Colliders debug
+    love.graphics.setColor(64, 128, 244)
+    local bodies = self.box2d_world:getBodyList()
+    for _, body in ipairs(bodies) do
+        local fixtures = body:getFixtureList()
+        for _, fixture in ipairs(fixtures) do
+            if fixture:getShape():type() == 'PolygonShape' then
+                love.graphics.polygon('line', body:getWorldPoints(fixture:getShape():getPoints()))
 
+            elseif fixture:getShape():type() == 'EdgeShape' or fixture:getShape():type() == 'ChainShape' then
+                local points = {body:getWorldPoints(fixture:getShape():getPoints())}
+                for i = 1, #points, 2 do
+                    if i < #points-2 then love.graphics.line(points[i], points[i+1], points[i+2], points[i+3]) end
+                end
+
+            elseif fixture:getShape():type() == 'CircleShape' then
+                local x, y = body:getPosition()
+                local r = fixture:getShape():getRadius()
+                love.graphics.circle('line', x, y, r, 360)
+            end
+        end
+    end
+    love.graphics.setColor(255, 255, 255)
+
+    -- Joint debug
+
+    -- Query debug
+    love.graphics.setColor(244, 128, 64)
+    for _, query_draw in ipairs(self.query_debug_draw) do
+        query_draw.frames = query_draw.frames - 1
+        if query_draw.type == 'circle' then
+            love.graphics.circle('line', query_draw.x, query_draw.y, query_draw.r)
+        elseif query_draw.type == 'rectangle' then
+            love.graphics.rectangle('line', query_draw.x, query_draw.x, query_draw.w, query_draw.h)
+        elseif query_draw.type == 'line' then
+            love.graphics.line(query_draw.x1, query_draw.y1, query_draw.x2, query_draw.y2)
+        elseif query_draw.type == 'polygon' then
+            local triangles = love.math.triangulate(query_draw.vertices)
+            for _, triangle in ipairs(triangles) do love.graphics.polygon('line', triangle) end
+        end
+    end
+    for i = #self.query_debug_draw, 1, -1 do
+        if self.query_debug_draw[i].frames <= 0 then
+            table.remove(self.query_debug_draw, i)
+        end
+    end
+    love.graphics.setColor(255, 255, 255)
 end
 
---- Adds a new collision class to the world. Collision classes are attached to colliders and define collider behavior in terms of which ones will be physically ignored and which ones will generate collision events between each other. All collision classes must be added **before** any collider is created. After all collision classes are added `collisionClassesSet` must be called once.
+--- Adds a new collision class to the world. Collision classes are attached to colliders and define collider behavior in terms of which ones will be physically ignored and which ones will generate collision events between each other. All collision classes must be added **before** any collider is created. After all collision classes are added `collisionClassesSet` must be called once. If `world.explicit_collision_events` is set to false (the default setting) then `enter`, `exit`, `pre` and `post` settings don't need to be specified (those events will be generated automatically for all existing collision classes).
 -- @luastart
 -- @code physics_world:addCollisionClass('Player', {
 -- @code                                 ignores = {'NPC', 'Enemy'}, 
@@ -69,11 +119,11 @@ end
 -- @luaend
 -- @arg {string} collision_class_name - The unique name of the collision class
 -- @arg {table} collision_class - The collision class. This table can contain:
--- @setting {table[string]=} ignores - The collision class names that will be physically ignored
--- @setting {table[string]=} enter - The collision class names that will generate collision events when they enter contact 
--- @setting {table[string]=} exit - The collision class names that will generate collision events when they exit contact 
--- @setting {table[string]=} pre - The collision class names that will generate collision events right before collision response is applied 
--- @setting {table[string]=} post - The collision class names that will generate collision events right after collision response is applied
+-- @setting {table[string]=} ignores - The collision classes that will be physically ignored
+-- @setting {table[string]=} enter - The collision classes that will generate collision events when they enter contact 
+-- @setting {table[string]=} exit - The collision classes that will generate collision events when they exit contact 
+-- @setting {table[string]=} pre - The collision classes that will generate collision events right before collision response is applied 
+-- @setting {table[string]=} post - The collision classes that will generate collision events right after collision response is applied
 function World:addCollisionClass(collision_class_name, collision_class)
     if self.collision_classes[collision_class_name] then error('Collision class ' .. collision_class_name .. ' already exists.') end
     if self.explicit_collision_events then
@@ -452,10 +502,10 @@ end
 -- @luastart
 -- @code collider = physics_world:newRectangleCollider(100, 100, 50, 50, {body_type = 'static', collision_class = 'Solid'})
 -- @luaend
--- @arg {number} x - The initial x position of the rectangle (center)
--- @arg {number} y - The initial y position of the rectangle (center)
--- @arg {number} w - The width of the rectangle (x - w/2 = rectangle's left side)
--- @arg {number} h - The height of the rectangle (y - h/2 = rectangle's top side)
+-- @arg {number} x - The initial x position of the rectangle (left-top)
+-- @arg {number} y - The initial y position of the rectangle (left-top)
+-- @arg {number} w - The width of the rectangle
+-- @arg {number} h - The height of the rectangle
 -- @arg {table=} settings - A table with additional and optional settings. This table can contain:
 -- @setting {BodyType='dynamic'} body_type - The body type, can be 'static', 'dynamic' or 'kinematic'
 -- @setting {string=} collision_class - The collision class of the rectangle, must be a valid collision class previously added with `addCollisionClass`
@@ -468,10 +518,10 @@ end
 -- @luastart
 -- @code collider = physics_world:newBSGRectangleCollider(100, 100, 50, 50, 5)
 -- @luaend
--- @arg {number} x - The initial x position of the rectangle (center)
--- @arg {number} y - The initial y position of the rectangle (center)
--- @arg {number} w - The width of the rectangle (x - w/2 = rectangle's left side)
--- @arg {number} h - The height of the rectangle (y - h/2 = rectangle's top side)
+-- @arg {number} x - The initial x position of the rectangle (left-top)
+-- @arg {number} y - The initial y position of the rectangle (left-top)
+-- @arg {number} w - The width of the rectangle
+-- @arg {number} h - The height of the rectangle 
 -- @arg {number} corner_cut_size - The corner cut size
 -- @arg {table=} settings - A table with additional and optional settings. This table can contain:
 -- @setting {BodyType='dynamic'} body_type - The body type, can be 'static', 'dynamic' or 'kinematic'
@@ -525,8 +575,40 @@ function World:newChainCollider(vertices, loop, settings)
 end
 
 -- Internal AABB box2d query used before going for more specific and precise computations.
-function World:queryBoundingBox(x1, y1, x2, y2, callback)
+function World:queryBoundingBox(x1, y1, x2, y2)
+    local colliders = {}
+    local callback = function(fixture)
+        if not fixture:isSensor() then table.insert(colliders, fixture:getUserData()) end
+        return true
+    end
+    self.box2d_world:queryBoundingBox(x1, y1, x2, y2, callback)
+    return colliders
+end
 
+function World:collisionClassInCollisionClassesList(collision_class, collision_classes)
+    if collision_classes[1] == 'All' then
+        local all_collision_classes = {}
+        for class, _ in pairs(self.collision_classes) do
+            table.insert(all_collision_classes, class)
+        end
+        if collision_classes.except then
+            for _, except in ipairs(collision_classes.except) do
+                for i, class in ipairs(all_collision_classes) do
+                    if class == except then 
+                        table.remove(all_collision_classes, i)
+                        break
+                    end
+                end
+            end
+        end
+        for _, class in ipairs(all_collision_classes) do
+            if class == collision_class then return true end
+        end
+    else
+        for _, class in ipairs(collision_classes) do
+            if class == collision_class then return true end
+        end
+    end
 end
 
 --- Queries a circular area around a point for colliders
@@ -538,8 +620,24 @@ end
 -- @arg {number} y - The initial y position of the circle (center)
 -- @arg {number} r - The radius of the circle
 -- @arg {table[string]='All'} collision_class_names - A table of strings with collision class names to be queried. The special value `'All'` (default) can be used to query for all existing collision class names. Another special value (a table of collision class names) `except` can be used to exclude some collision class names when `'All'` is used.
+-- @returns {table[Collider]}
 function World:queryCircleArea(x, y, radius, collision_class_names)
+    if not collision_class_names then collision_class_names = {'All'} end
+    table.insert(self.query_debug_draw, {type = 'circle', x = x, y = y, r = radius, frames = self.draw_query_for_n_frames})
     
+    local colliders = self:queryBoundingBox(x-radius, y-radius, x+radius, y+radius) 
+    local outs = {}
+    for _, collider in ipairs(colliders) do
+        if self:collisionClassInCollisionClassesList(collider.collision_class, collision_class_names) then
+            for _, fixture in ipairs(collider.body:getFixtureList()) do
+                if self.hx.Math.polygon.getCircleIntersection(x, y, radius, {collider.body:getWorldPoints(fixture:getShape():getPoints())}) then
+                    table.insert(outs, collider)
+                    break
+                end
+            end
+        end
+    end
+    return outs
 end
 
 --- Queries a rectangular area around a point for colliders
@@ -548,13 +646,29 @@ end
 -- @code colliders_1 = physics_world:queryRectangleArea(100, 100, 50, 50 {'Enemy', 'NPC'})
 -- @code colliders_2 = physics_world:queryRectangleArea(100, 100, 50, 50, {'All', except = {'Player'}})
 -- @luaend
--- @arg {number} x - The initial x position of the rectangle (center)
--- @arg {number} y - The initial y position of the rectangle (center)
--- @arg {number} w - The width of the rectangle (x - w/2 = rectangle's left side)
--- @arg {number} h - The height of the rectangle (y - h/2 = rectangle's top side)
+-- @arg {number} x - The initial x position of the rectangle (left-top)
+-- @arg {number} y - The initial y position of the rectangle (left-top)
+-- @arg {number} w - The width of the rectangle
+-- @arg {number} h - The height of the rectangle
 -- @arg {table[string]='All'} collision_class_names - A table of strings with collision class names to be queried. The special value `'All'` (default) can be used to query for all existing collision class names. Another special value (a table of collision class names) `except` can be used to exclude some collision class names when `'All'` is used.
+-- @returns {table[Collider]}
 function World:queryRectangleArea(x, y, w, h, collision_class_names)
-    
+    if not collision_class_names then collision_class_names = {'All'} end
+    table.insert(self.query_debug_draw, {type = 'rectangle', x = x, y = y, w = w, h = h, frames = self.draw_query_for_n_frames})
+
+    local colliders = self:queryBoundingBox(x, y, x+w, y+h) 
+    local outs = {}
+    for _, collider in ipairs(colliders) do
+        if self:collisionClassInCollisionClassesList(collider.collision_class, collision_class_names) then
+            for _, fixture in ipairs(collider.body:getFixtureList()) do
+                if self.hx.Math.polygon.isPolygonInside({x, y, x+w, y, x+w, y+h, x, y+h}, {collider.body:getWorldPoints(fixture:getShape():getPoints())}) then
+                    table.insert(outs, collider)
+                    break
+                end
+            end
+        end
+    end
+    return outs
 end
 
 --- Queries an arbitrary area for colliders
@@ -564,8 +678,30 @@ end
 -- @luaend
 -- @arg {table[number]} vertices - The polygon vertices as a table of numbers
 -- @arg {table[string]='All'} collision_class_names - A table of strings with collision class names to be queried. The special value `'All'` (default) can be used to query for all existing collision class names. Another special value (a table of collision class names) `except` can be used to exclude some collision class names when `'All'` is used.
+-- @returns {table[Collider]}
 function World:queryPolygonArea(vertices, collision_class_names)
-    
+    if not collision_class_names then collision_class_names = {'All'} end
+    table.insert(self.query_debug_draw, {type = 'polygon', vertices = vertices, frames = self.draw_query_for_n_frames})
+
+    local cx, cy = self.hx.Math.polygon.getCentroid(vertices)
+    local d_max = 0
+    for i = 1, #vertices, 2 do
+        local d = self.hx.Math.line.getLength(cx, cy, vertices[i], vertices[i+1])
+        if d > d_max then d_max = d end
+    end
+    local colliders = self:queryBoundingBox(cx-d_max, cy-d_max, cx+d_max, cy+d_max)
+    local outs = {}
+    for _, collider in ipairs(colliders) do
+        if self:collisionClassInCollisionClassesList(collider.collision_class, collision_class_names) then
+            for _, fixture in ipairs(collider.body:getFixtureList()) do
+                if self.hx.Math.polygon.isPolygonInside(vertices, {collider.body:getWorldPoints(fixture:getShape():getPoints())}) then
+                    table.insert(outs, collider)
+                    break
+                end
+            end
+        end
+    end
+    return outs
 end
 
 --- Queries for colliders that intersect with a line
@@ -578,8 +714,25 @@ end
 -- @arg {number} x2 - The final x position of the line
 -- @arg {number} y2 - The final y position of the line
 -- @arg {table[string]='All'} collision_class_names - A table of strings with collision class names to be queried. The special value `'All'` (default) can be used to query for all existing collision class names. Another special value (a table of collision class names) `except` can be used to exclude some collision class names when `'All'` is used.
+-- @returns {table[Collider]}
 function World:queryLine(x1, y1, x2, y2, collision_class_names)
-    
+    if not collision_class_names then collision_class_names = {'All'} end
+    table.insert(self.query_debug_draw, {type = 'line', x1 = x1, y1 = y1, x2 = x2, y2 = y2, frames = self.draw_query_for_n_frames})
+
+    local colliders = {}
+    local callback = function(fixture, ...)
+        if not fixture:isSensor() then table.insert(colliders, fixture:getUserData()) end
+        return 1
+    end
+    self.box2d_world:rayCast(x1, y1, x2, y2, callback)
+
+    local outs = {}
+    for _, collider in ipairs(colliders) do
+        if self:collisionClassInCollisionClassesList(collider.collision_class, collision_class_names) then
+            table.insert(outs, collider)
+        end
+    end
+    return outs
 end
 
 --- Adds a joint to the world. A joint can be accessed via physics_world.joints[joint_name]
@@ -598,7 +751,9 @@ end
 --- Removes a joint from the world 
 -- @arg {string} joint_name - The unique name of the joint to be removed. Must be a name previously added with `addJoint`
 function World:removeJoint(joint_name)
-    
+    if not self.joints[joint_name] then error("Joint " .. joint_name .. " doesn't exist.") end
+    self.joints[joint_name]:destroy()
+    self.joints[joint_name] = nil
 end
 
 --- @class Collider 
@@ -624,13 +779,13 @@ function Collider.new(world, collider_type, ...)
 
     elseif self.type == 'Rectangle' then
         self.collision_class = (args[5] and args[5].collision_class) or 'Default'
-        self.body = love.physics.newBody(self.world.box2d_world, args[1], args[2], (args[5] and args[5].body_type) or 'dynamic')
+        self.body = love.physics.newBody(self.world.box2d_world, args[1] + args[3]/2, args[2] + args[4]/2, (args[5] and args[5].body_type) or 'dynamic')
         self.body:setFixedRotation(true)
         shape = love.physics.newRectangleShape(args[3], args[4])
 
     elseif self.type == 'BSGRectangle' then
         self.collision_class = (args[6] and args[6].collision_class) or 'Default'
-        self.body = love.physics.newBody(self.world.box2d_world, args[1], args[2], (args[6] and args[6].body_type) or 'dynamic')
+        self.body = love.physics.newBody(self.world.box2d_world, args[1] + args[3]/2, args[2] + args[4]/2, (args[6] and args[6].body_type) or 'dynamic')
         self.body:setFixedRotation(true)
         local w, h, s = args[3], args[4], args[5]
         shape = love.physics.newPolygonShape({
@@ -642,20 +797,12 @@ function Collider.new(world, collider_type, ...)
 
     elseif self.type == 'Polygon' then
         self.collision_class = (args[2] and args[2].collision_class) or 'Default'
-        local cx, cy = self.world.hx.Math.polygon.getCentroid(args[1])
         self.body = love.physics.newBody(self.world.box2d_world, 0, 0, (args[2] and args[2].body_type) or 'dynamic')
         self.body:setFixedRotation(true)
-        --[[
-        for i = 1, #args[1], 2 do
-            args[1][i] = args[1][i] - cx
-            args[1][i+1] = args[1][i+1] - cy
-        end
-        ]]--
         shape = love.physics.newPolygonShape(unpack(args[1]))
 
     elseif self.type == 'Line' then
         self.collision_class = (args[5] and args[5].collision_class) or 'Default'
-        local mx, my = self.world.hx.Math.line.getMidpoint(args[1], args[2], args[3], args[4])
         self.body = love.physics.newBody(self.world.box2d_world, 0, 0, (args[5] and args[5].body_type) or 'dynamic')
         self.body:setFixedRotation(true)
         shape = love.physics.newEdgeShape(args[1], args[2], args[3], args[4])
@@ -683,35 +830,6 @@ function Collider.new(world, collider_type, ...)
     self.sensors['main'] = sensor
 
     return setmetatable(self, Collider)
-end
-
-function Collider:update(dt)
-    
-end
-
-function Collider:draw()
-    for name, _ in pairs(self.shapes) do
-        if self.shapes[name]:type() == 'PolygonShape' then
-            love.graphics.setColor(64, 128, 244)
-            love.graphics.polygon('line', self.body:getWorldPoints(self.shapes[name]:getPoints()))
-            love.graphics.setColor(255, 255, 255)
-
-        elseif self.shapes[name]:type() == 'EdgeShape' or self.shapes[name]:type() == 'ChainShape' then
-            love.graphics.setColor(64, 128, 244)
-            local points = {self.body:getWorldPoints(self.shapes[name]:getPoints())}
-            for i = 1, #points, 2 do
-                if i < #points-2 then love.graphics.line(points[i], points[i+1], points[i+2], points[i+3]) end
-            end
-            love.graphics.setColor(255, 255, 255)
-
-        elseif self.shapes[name]:type() == 'CircleShape' then
-            love.graphics.setColor(64, 128, 244)
-            local x, y = self.body:getPosition()
-            local r = self.shapes[name]:getRadius()
-            love.graphics.circle('line', x, y, r, 360)
-            love.graphics.setColor(255, 255, 255)
-        end
-    end
 end
 
 --- Changes this collider's collision class. The new collision class must be a valid one previously added with `addCollisionClass`
@@ -850,6 +968,19 @@ function Collider:removeShape(shape_name)
     self.sensors[shape_name]:setUserData(nil)
     self.sensors[shape_name]:destroy()
     self.sensors[shape_name] = nil
+end
+
+--- Destroys the collider and removes it from the world
+function Collider:destroy()
+    for name, _ in pairs(self.fixtures) do
+        self.shapes[name] = nil
+        self.fixtures[name]:setUserData(nil)
+        self.fixtures[name] = nil
+        self.sensors[name]:setUserData(nil)
+        self.sensors[name] = nil
+    end
+    self.body:destroy()
+    self.body = nil
 end
 
 hx.World = World

@@ -27,6 +27,7 @@ hxdx
   - [post](#postothercollisionclassname)
   - [addShape](#addshapeshapename-shapetype-)
   - [removeShape](#removeshapeshapename)
+  - [destroy](#destroy)
 
 # World
 
@@ -50,6 +51,8 @@ Settings:
 - `[gravity_x=0]` `(number)` - The world's x gravity component
 - `[gravity_y=0]` `(number)` - The world's y gravity component
 - `[allow_sleeping=true]` `(boolean)` - If the world's bodies are allowed to sleep
+- `[explicit_collision_events=false]` `(boolean)` - If the collision classes added to this world will automatically generate collision events for all other collision classes they collide with or if this has to be specified manually
+- `[draw_query_for_n_frames=60]` `(number)` - Number of frames a query is drawn for when debugging
 
 Returns:
 
@@ -72,7 +75,7 @@ Arguments:
 
 #### `:draw()`
 
-Draws the World (for debugging purposes)
+Draws the World, drawing all colliders, joints and world queries (for debugging purposes)
 
 ```lua
 physics_world:draw()
@@ -81,7 +84,7 @@ physics_world:draw()
 
 #### `:addCollisionClass(collision_class_name, collision_class)`
 
-Adds a new collision class to the world. Collision classes are attached to colliders and define collider behavior in terms of which ones will be physically ignored and which ones will generate collision events between each other. All collision classes must be added **before** any collider is created. After all collision classes are added `collisionClassesSet` must be called once.
+Adds a new collision class to the world. Collision classes are attached to colliders and define collider behavior in terms of which ones will be physically ignored and which ones will generate collision events between each other. All collision classes must be added **before** any collider is created. After all collision classes are added `collisionClassesSet` must be called once. If `world.explicit_collision_events` is set to false (the default setting) then `enter`, `exit`, `pre` and `post` settings don't need to be specified (those events will be generated automatically for all existing collision classes).
 
 ```lua
 physics_world:addCollisionClass('Player', {
@@ -96,11 +99,11 @@ Arguments:
 
 Settings:
 
-- `[ignores]` `(table[string])` - The collision class names that will be physically ignored
-- `[enter]` `(table[string])` - The collision class names that will generate collision events when they enter contact
-- `[exit]` `(table[string])` - The collision class names that will generate collision events when they exit contact
-- `[pre]` `(table[string])` - The collision class names that will generate collision events right before collision response is applied
-- `[post]` `(table[string])` - The collision class names that will generate collision events right after collision response is applied
+- `[ignores]` `(table[string])` - The collision classes that will be physically ignored
+- `[enter]` `(table[string])` - The collision classes that will generate collision events when they enter contact
+- `[exit]` `(table[string])` - The collision classes that will generate collision events when they exit contact
+- `[pre]` `(table[string])` - The collision classes that will generate collision events right before collision response is applied
+- `[post]` `(table[string])` - The collision classes that will generate collision events right after collision response is applied
 
 ---
 
@@ -144,10 +147,10 @@ collider = physics_world:newRectangleCollider(100, 100, 50, 50, {body_type = 'st
 ```
 Arguments:
 
-- `x` `(number)` - The initial x position of the rectangle (center)
-- `y` `(number)` - The initial y position of the rectangle (center)
-- `w` `(number)` - The width of the rectangle (x - w/2 = rectangle's left side)
-- `h` `(number)` - The height of the rectangle (y - h/2 = rectangle's top side)
+- `x` `(number)` - The initial x position of the rectangle (left-top)
+- `y` `(number)` - The initial y position of the rectangle (left-top)
+- `w` `(number)` - The width of the rectangle
+- `h` `(number)` - The height of the rectangle
 - `[settings]` `(table)` - A table with additional and optional settings. This table can contain:
 
 Settings:
@@ -170,10 +173,10 @@ collider = physics_world:newBSGRectangleCollider(100, 100, 50, 50, 5)
 ```
 Arguments:
 
-- `x` `(number)` - The initial x position of the rectangle (center)
-- `y` `(number)` - The initial y position of the rectangle (center)
-- `w` `(number)` - The width of the rectangle (x - w/2 = rectangle's left side)
-- `h` `(number)` - The height of the rectangle (y - h/2 = rectangle's top side)
+- `x` `(number)` - The initial x position of the rectangle (left-top)
+- `y` `(number)` - The initial y position of the rectangle (left-top)
+- `w` `(number)` - The width of the rectangle
+- `h` `(number)` - The height of the rectangle
 - `corner_cut_size` `(number)` - The corner cut size
 - `[settings]` `(table)` - A table with additional and optional settings. This table can contain:
 
@@ -276,6 +279,10 @@ Arguments:
 - `r` `(number)` - The radius of the circle
 - `[collision_class_names='All']` `(table[string])` - A table of strings with collision class names to be queried. The special value `'All'` (default) can be used to query for all existing collision class names. Another special value (a table of collision class names) `except` can be used to exclude some collision class names when `'All'` is used.
 
+Returns:
+
+- `table[Collider]` - 
+
 ---
 
 #### `:queryRectangleArea(x, y, w, h, collision_class_names)`
@@ -289,11 +296,15 @@ colliders_2 = physics_world:queryRectangleArea(100, 100, 50, 50, {'All', except 
 ```
 Arguments:
 
-- `x` `(number)` - The initial x position of the rectangle (center)
-- `y` `(number)` - The initial y position of the rectangle (center)
-- `w` `(number)` - The width of the rectangle (x - w/2 = rectangle's left side)
-- `h` `(number)` - The height of the rectangle (y - h/2 = rectangle's top side)
+- `x` `(number)` - The initial x position of the rectangle (left-top)
+- `y` `(number)` - The initial y position of the rectangle (left-top)
+- `w` `(number)` - The width of the rectangle
+- `h` `(number)` - The height of the rectangle
 - `[collision_class_names='All']` `(table[string])` - A table of strings with collision class names to be queried. The special value `'All'` (default) can be used to query for all existing collision class names. Another special value (a table of collision class names) `except` can be used to exclude some collision class names when `'All'` is used.
+
+Returns:
+
+- `table[Collider]` - 
 
 ---
 
@@ -309,6 +320,10 @@ Arguments:
 
 - `vertices` `(table[number])` - The polygon vertices as a table of numbers
 - `[collision_class_names='All']` `(table[string])` - A table of strings with collision class names to be queried. The special value `'All'` (default) can be used to query for all existing collision class names. Another special value (a table of collision class names) `except` can be used to exclude some collision class names when `'All'` is used.
+
+Returns:
+
+- `table[Collider]` - 
 
 ---
 
@@ -327,6 +342,10 @@ Arguments:
 - `x2` `(number)` - The final x position of the line
 - `y2` `(number)` - The final y position of the line
 - `[collision_class_names='All']` `(table[string])` - A table of strings with collision class names to be queried. The special value `'All'` (default) can be used to query for all existing collision class names. Another special value (a table of collision class names) `except` can be used to exclude some collision class names when `'All'` is used.
+
+Returns:
+
+- `table[Collider]` - 
 
 ---
 
@@ -484,4 +503,10 @@ Removes a shape from the collider (also removes the accompanying fixture)
 Arguments:
 
 - `shape_name` `(string)` - The unique name of the shape to be removed. Must be a name previously added with `addShape`
+
+---
+
+#### `:destroy()`
+
+Destroys the collider and removes it from the world
 
