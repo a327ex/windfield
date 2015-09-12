@@ -15,6 +15,7 @@ World.__index = World
 -- @setting {boolean=true} allow_sleeping - If the world's bodies are allowed to sleep
 -- @setting {boolean=false} explicit_collision_events - If the collision classes added to this world will automatically generate collision events for all other collision classes they collide with or if this has to be specified manually
 -- @setting {number=60} draw_query_for_n_frames - Number of frames a query is drawn for when debugging
+-- @settings {boolean=false} debug_drawing_disabled - If debug drawing is enabled (disable for extra performance)
 -- @returns {World}
 function hx.newWorld(settings)
     local world = hx.World.new(hx, settings)
@@ -22,7 +23,6 @@ function hx.newWorld(settings)
     world.box2d_world:setCallbacks(world.collisionOnEnter, world.collisionOnExit, world.collisionPre, world.collisionPost)
     world:collisionClear()
     world:addCollisionClass('Default')
-    world:collisionClassesSet()
 
     return world
 end
@@ -34,6 +34,7 @@ function World.new(hx, settings)
 
     self.explicit_collision_events = settings.explicit_collision_events
     self.draw_query_for_n_frames = settings.draw_query_for_n_frames or 60
+    self.debug_drawing_disabled = settings.debug_drawing_disabled
     self.collision_classes = {}
     self.masks = {}
     self.is_sensor_memo = {}
@@ -110,7 +111,7 @@ function World:draw()
     love.graphics.setColor(255, 255, 255)
 end
 
---- Adds a new collision class to the world. Collision classes are attached to colliders and define collider behavior in terms of which ones will be physically ignored and which ones will generate collision events between each other. All collision classes must be added **before** any collider is created. After all collision classes are added `collisionClassesSet` must be called once. If `world.explicit_collision_events` is set to false (the default setting) then `enter`, `exit`, `pre` and `post` settings don't need to be specified (those events will be generated automatically for all existing collision classes).
+--- Adds a new collision class to the world. Collision classes are attached to colliders and define collider behavior in terms of which ones will be physically ignored and which ones will generate collision events between each other. All collision classes must be added before any collider is created. If `world.explicit_collision_events` is set to false (the default setting) then `enter`, `exit`, `pre` and `post` settings don't need to be specified (those events will be generated automatically for all existing collision classes).
 -- @luastart
 -- @code physics_world:addCollisionClass('Player', {
 -- @code                                 ignores = {'NPC', 'Enemy'}, 
@@ -141,12 +142,14 @@ function World:addCollisionClass(collision_class_name, collision_class)
             table.insert(self.collision_classes[collision_class_name].post, c_class_name)
         end
     end
+
+    self:collisionClassesSet()
 end
 
---- Sets all collision classes. This function must be called once after all collision classes have been added and before any collider is created.
 function World:collisionClassesSet()
     self:generateCategoriesMasks()
 
+    self:collisionClear()
     local collision_table = self:getCollisionCallbacksTable()
     for collision_class_name, collision_list in pairs(collision_table) do
         for _, collision_info in ipairs(collision_list) do
@@ -623,7 +626,7 @@ end
 -- @returns {table[Collider]}
 function World:queryCircleArea(x, y, radius, collision_class_names)
     if not collision_class_names then collision_class_names = {'All'} end
-    table.insert(self.query_debug_draw, {type = 'circle', x = x, y = y, r = radius, frames = self.draw_query_for_n_frames})
+    if not self.debug_drawing_disabled then table.insert(self.query_debug_draw, {type = 'circle', x = x, y = y, r = radius, frames = self.draw_query_for_n_frames}) end
     
     local colliders = self:queryBoundingBox(x-radius, y-radius, x+radius, y+radius) 
     local outs = {}
@@ -654,7 +657,7 @@ end
 -- @returns {table[Collider]}
 function World:queryRectangleArea(x, y, w, h, collision_class_names)
     if not collision_class_names then collision_class_names = {'All'} end
-    table.insert(self.query_debug_draw, {type = 'rectangle', x = x, y = y, w = w, h = h, frames = self.draw_query_for_n_frames})
+    if not self.debug_drawing_disabled then table.insert(self.query_debug_draw, {type = 'rectangle', x = x, y = y, w = w, h = h, frames = self.draw_query_for_n_frames}) end
 
     local colliders = self:queryBoundingBox(x, y, x+w, y+h) 
     local outs = {}
@@ -681,7 +684,7 @@ end
 -- @returns {table[Collider]}
 function World:queryPolygonArea(vertices, collision_class_names)
     if not collision_class_names then collision_class_names = {'All'} end
-    table.insert(self.query_debug_draw, {type = 'polygon', vertices = vertices, frames = self.draw_query_for_n_frames})
+    if not self.debug_drawing_disabled then table.insert(self.query_debug_draw, {type = 'polygon', vertices = vertices, frames = self.draw_query_for_n_frames}) end
 
     local cx, cy = self.hx.Math.polygon.getCentroid(vertices)
     local d_max = 0
@@ -717,7 +720,7 @@ end
 -- @returns {table[Collider]}
 function World:queryLine(x1, y1, x2, y2, collision_class_names)
     if not collision_class_names then collision_class_names = {'All'} end
-    table.insert(self.query_debug_draw, {type = 'line', x1 = x1, y1 = y1, x2 = x2, y2 = y2, frames = self.draw_query_for_n_frames})
+    if not self.debug_drawing_disabled then table.insert(self.query_debug_draw, {type = 'line', x1 = x1, y1 = y1, x2 = x2, y2 = y2, frames = self.draw_query_for_n_frames}) end
 
     local colliders = {}
     local callback = function(fixture, ...)
@@ -844,6 +847,12 @@ end
 function Collider:changeCollisionClass(collision_class_name)
     if not self.world.collision_classes[collision_class_name] then error("Collision class " .. collision_class_name .. " doesn't exist.") end
     self.collision_class = collision_class_name
+    for _, fixture in pairs(self.fixtures) do
+        if self.world.masks[collision_class_name] then
+            fixture:setCategory(unpack(self.world.masks[collision_class_name].categories))
+            fixture:setMask(unpack(self.world.masks[collision_class_name].masks))
+        end
+    end
 end
 
 --- Checks for collision enter events from this collider with another
