@@ -921,7 +921,7 @@ end
 --- Sets the preSolve callback. Unlike with `:enter` or `:exit` that can be delayed and checked after the physics simulation is done for this frame, 
 -- both preSolve and postSolve must be callbacks that are resolved immediately, since they may change how the rest of the simulation plays out on this frame.
 -- @luastart
--- @code collider:setPreSolve(function(collider, contact)
+-- @code collider:setPreSolve(function(collider_1, collider_2, contact)
 -- @code   contact:setEnabled(false)
 -- @code end
 -- @luaend
@@ -933,8 +933,8 @@ end
 --- Sets the postSolve callback. Unlike with `:enter` or `:exit` that can be delayed and checked after the physics simulation is done for this frame, 
 -- both preSolve and postSolve must be callbacks that are resolved immediately, since they may change how the rest of the simulation plays out on this frame.
 -- @luastart
--- @code if collider:post('Enemy') then
--- @code   local _, enemy_collider, _, ni1, ti1, ni2, ti2 = collider:post('Enemy')
+-- @code collider:setPreSolve(function(collider_1, collider_2, contact, ni1, ti1, ni2, ti2)
+-- @code   contact:setEnabled(false)
 -- @code end
 -- @luaend
 -- @arg {function} callback - The postSolve callback. Receives `collider_1`, `collider_2`, `contact`, `normal_impulse1`, `tangent_impulse1`, `normal_impulse2`, `tangent_impulse2` as arguments

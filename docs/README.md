@@ -435,7 +435,7 @@ Returns:
 Sets the preSolve callback. Unlike with `:enter` or `:exit` that can be delayed and checked after the physics simulation is done for this frame,  both preSolve and postSolve must be callbacks that are resolved immediately, since they may change how the rest of the simulation plays out on this frame.
 
 ```lua
-collider:setPreSolve(function(collider, contact)
+collider:setPreSolve(function(collider_1, collider_2, contact)
   contact:setEnabled(false)
 end
 ```
@@ -450,8 +450,8 @@ Arguments:
 Sets the postSolve callback. Unlike with `:enter` or `:exit` that can be delayed and checked after the physics simulation is done for this frame,  both preSolve and postSolve must be callbacks that are resolved immediately, since they may change how the rest of the simulation plays out on this frame.
 
 ```lua
-if collider:post('Enemy') then
-  local _, enemy_collider, _, ni1, ti1, ni2, ti2 = collider:post('Enemy')
+collider:setPreSolve(function(collider_1, collider_2, contact, ni1, ti1, ni2, ti2)
+  contact:setEnabled(false)
 end
 ```
 Arguments:
