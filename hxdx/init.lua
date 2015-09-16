@@ -762,6 +762,17 @@ function World:removeJoint(joint)
     joint:destroy()
 end
 
+--- Destroys the world and removes all bodies, joints, fixtures and shapes from it
+function World:destroy()
+    local bodies = self.box2d_world:getBodyList()
+    for _, body in ipairs(bodies) do
+        local collider = body:getFixtureList()[1]:getUserData()
+        collider:destroy()
+    end
+    self.box2d_world:destroy()
+    self.box2d_world = nil
+end
+
 --- @class Collider 
 -- @description A collider is a box2d physics object (body + shape + fixture) that has a collision class and that can generate collision events.
 local Collider = {}
@@ -775,6 +786,7 @@ function Collider.new(world, collider_type, ...)
     self.fixtures = {}
     self.sensors = {}
     self.collision_events = {}
+    self.user_data = nil
 
     local args = {...}
     local shape, fixture
@@ -926,13 +938,23 @@ end
 --- Sets the postSolve callback. Unlike with `:enter` or `:exit` that can be delayed and checked after the physics simulation is done for this frame, 
 -- both preSolve and postSolve must be callbacks that are resolved immediately, since they may change how the rest of the simulation plays out on this frame.
 -- @luastart
--- @code collider:setPreSolve(function(collider_1, collider_2, contact, ni1, ti1, ni2, ti2)
+-- @code collider:setPostSolve(function(collider_1, collider_2, contact, ni1, ti1, ni2, ti2)
 -- @code   contact:setEnabled(false)
 -- @code end
 -- @luaend
 -- @arg {function} callback - The postSolve callback. Receives `collider_1`, `collider_2`, `contact`, `normal_impulse1`, `tangent_impulse1`, `normal_impulse2`, `tangent_impulse2` as arguments
 function Collider:setPostSolve(callback)
     self.postSolve = callback
+end
+
+--- Sets the collider's user data. This is useful to set to the entity the collider belongs to, so that when a query call is made and colliders are returned you can immediately get the pertinent entity.
+-- @luastart
+-- @code -- in the constructor of some entity
+-- @code self.collider = physics_world:newRectangleCollider(...)
+-- @code self.collider:setUserData(self)
+-- @ arg {*} user_data - The user data, can be anything
+function Collider:setUserData(user_data)
+    self.user_data = user_data
 end
 
 --- Adds a shape to the collider. A shape can be accessed via collider.shapes[shape_name]. A fixture of the same name is also added to attach the shape to the collider body. A fixture can be accessed via collider.fixtures[fixture_name]
@@ -973,6 +995,7 @@ end
 
 --- Destroys the collider and removes it from the world
 function Collider:destroy()
+    self:setUserData(nil)
     for name, _ in pairs(self.fixtures) do
         self.shapes[name] = nil
         self.fixtures[name]:setUserData(nil)
