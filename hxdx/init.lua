@@ -15,7 +15,7 @@ World.__index = World
 -- @setting {boolean=true} allow_sleeping - If the world's bodies are allowed to sleep
 -- @setting {boolean=false} explicit_collision_events - If the collision classes added to this world will automatically generate collision events for all other collision classes they collide with or if this has to be specified manually
 -- @setting {number=60} draw_query_for_n_frames - Number of frames a query is drawn for when debugging
--- @settings {boolean=false} debug_drawing_disabled - If debug drawing is enabled (disable for extra performance)
+-- @settings {boolean=false} debug_drawing_enabled - If debug drawing is enabled (disable for extra performance)
 -- @returns {World}
 function hx.newWorld(settings)
     local world = hx.World.new(hx, settings)
@@ -34,7 +34,7 @@ function World.new(hx, settings)
 
     self.explicit_collision_events = settings.explicit_collision_events
     self.draw_query_for_n_frames = settings.draw_query_for_n_frames or 60
-    self.debug_drawing_disabled = settings.debug_drawing_disabled
+    self.debug_drawing_enabled = settings.debug_drawing_enabled
     self.collision_classes = {}
     self.masks = {}
     self.is_sensor_memo = {}
@@ -78,9 +78,10 @@ function World:draw()
                 end
 
             elseif fixture:getShape():type() == 'CircleShape' then
-                local x, y = body:getPosition()
+                local body_x, body_y = body:getPosition()
+                local shape_x, shape_y = fixture:getShape():getPoint()
                 local r = fixture:getShape():getRadius()
-                love.graphics.circle('line', x, y, r, 360)
+                love.graphics.circle('line', body_x + shape_x, body_y + shape_y, r, 360)
             end
         end
     end
@@ -634,7 +635,9 @@ end
 -- @returns {table[Collider]}
 function World:queryCircleArea(x, y, radius, collision_class_names)
     if not collision_class_names then collision_class_names = {'All'} end
-    if not self.debug_drawing_disabled then table.insert(self.query_debug_draw, {type = 'circle', x = x, y = y, r = radius, frames = self.draw_query_for_n_frames}) end
+    if self.debug_drawing_enabled then 
+        table.insert(self.query_debug_draw, {type = 'circle', x = x, y = y, r = radius, frames = self.draw_query_for_n_frames}) 
+    end
     
     local colliders = self:queryBoundingBox(x-radius, y-radius, x+radius, y+radius) 
     local outs = {}
@@ -665,7 +668,9 @@ end
 -- @returns {table[Collider]}
 function World:queryRectangleArea(x, y, w, h, collision_class_names)
     if not collision_class_names then collision_class_names = {'All'} end
-    if not self.debug_drawing_disabled then table.insert(self.query_debug_draw, {type = 'rectangle', x = x, y = y, w = w, h = h, frames = self.draw_query_for_n_frames}) end
+    if self.debug_drawing_enabled then 
+        table.insert(self.query_debug_draw, {type = 'rectangle', x = x, y = y, w = w, h = h, frames = self.draw_query_for_n_frames}) 
+    end
 
     local colliders = self:queryBoundingBox(x, y, x+w, y+h) 
     local outs = {}
@@ -692,7 +697,9 @@ end
 -- @returns {table[Collider]}
 function World:queryPolygonArea(vertices, collision_class_names)
     if not collision_class_names then collision_class_names = {'All'} end
-    if not self.debug_drawing_disabled then table.insert(self.query_debug_draw, {type = 'polygon', vertices = vertices, frames = self.draw_query_for_n_frames}) end
+    if self.debug_drawing_enabled then 
+        table.insert(self.query_debug_draw, {type = 'polygon', vertices = vertices, frames = self.draw_query_for_n_frames}) 
+    end
 
     local cx, cy = self.hx.Math.polygon.getCentroid(vertices)
     local d_max = 0
@@ -728,7 +735,9 @@ end
 -- @returns {table[Collider]}
 function World:queryLine(x1, y1, x2, y2, collision_class_names)
     if not collision_class_names then collision_class_names = {'All'} end
-    if not self.debug_drawing_disabled then table.insert(self.query_debug_draw, {type = 'line', x1 = x1, y1 = y1, x2 = x2, y2 = y2, frames = self.draw_query_for_n_frames}) end
+    if self.debug_drawing_enabled then 
+        table.insert(self.query_debug_draw, {type = 'line', x1 = x1, y1 = y1, x2 = x2, y2 = y2, frames = self.draw_query_for_n_frames}) 
+    end
 
     local colliders = {}
     local callback = function(fixture, ...)
