@@ -476,6 +476,7 @@ Sets the collider's user data. This is useful to set to the entity the collider 
 -- in the constructor of some entity
 self.collider = physics_world:newRectangleCollider(...)
 self.collider:setUserData(self)
+```
 ---
 
 #### `:addShape(shape_name, shape_type, ...)`

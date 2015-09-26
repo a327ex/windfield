@@ -961,6 +961,7 @@ end
 -- @code -- in the constructor of some entity
 -- @code self.collider = physics_world:newRectangleCollider(...)
 -- @code self.collider:setUserData(self)
+-- @luaend
 -- @ arg {*} user_data - The user data, can be anything
 function Collider:setUserData(user_data)
     self.user_data = user_data
