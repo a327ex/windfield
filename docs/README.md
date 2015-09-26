@@ -18,12 +18,14 @@ hxdx
   - [queryLine](#querylinex1-y1-x2-y2-collision_class_names)
   - [addJoint](#addjointjoint_type-)
   - [removeJoint](#removejointjoint)
+  - [destroy](#destroy)
 - [Collider](#collider)
   - [changeCollisionClass](#changecollisionclasscollision_class_name)
   - [enter](#enterother_collision_class_name)
   - [exit](#exitother_collision_class_name)
   - [setPreSolve](#setpresolvecallback)
   - [setPostSolve](#setpostsolvecallback)
+  - [setUserData](#setuserdatauser_data)
   - [addShape](#addshapeshape_name-shape_type-)
   - [removeShape](#removeshapeshape_name)
   - [destroy](#destroy)
@@ -365,6 +367,12 @@ Arguments:
 
 - `joint` `(Joint)` - The joint to be removed
 
+---
+
+#### `:destroy()`
+
+Destroys the world and removes all bodies, joints, fixtures and shapes from it
+
 # Collider
 
 A collider is a box2d physics object (body + shape + fixture) that has a collision class and that can generate collision events.
@@ -450,7 +458,7 @@ Arguments:
 Sets the postSolve callback. Unlike with `:enter` or `:exit` that can be delayed and checked after the physics simulation is done for this frame,  both preSolve and postSolve must be callbacks that are resolved immediately, since they may change how the rest of the simulation plays out on this frame.
 
 ```lua
-collider:setPreSolve(function(collider_1, collider_2, contact, ni1, ti1, ni2, ti2)
+collider:setPostSolve(function(collider_1, collider_2, contact, ni1, ti1, ni2, ti2)
   contact:setEnabled(false)
 end
 ```
@@ -458,6 +466,16 @@ Arguments:
 
 - `callback` `(function)` - The postSolve callback. Receives `collider_1`, `collider_2`, `contact`, `normal_impulse1`, `tangent_impulse1`, `normal_impulse2`, `tangent_impulse2` as arguments
 
+---
+
+#### `:setUserData(user_data)`
+
+Sets the collider's user data. This is useful to set to the entity the collider belongs to, so that when a query call is made and colliders are returned you can immediately get the pertinent entity.
+
+```lua
+-- in the constructor of some entity
+self.collider = physics_world:newRectangleCollider(...)
+self.collider:setUserData(self)
 ---
 
 #### `:addShape(shape_name, shape_type, ...)`
