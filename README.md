@@ -9,6 +9,9 @@
    * [Create collision classes](#create-collision-classes)
    * [Capture collision events](#capture-collision-events)
    * [Query the world](#query-the-world)
+* [Examples & Tips](#examples-tips)
+   * [Checking collisions between game objects](#checking-collisions-between-game-objects)
+   * [One-way Platforms](#oneway-platforms)
 * [Documentation](#documentation)
    * [World](#world)
       * [newWorld](#newworldxg-yg-sleep)
@@ -231,6 +234,92 @@ And that looks like this:
 <p align="center">
   <img src="http://i.imgur.com/YVxAiuu.gif"/>
 </p>
+
+<br>
+
+# Examples & Tips
+
+## Checking collisions between game objects
+
+The most common use case for a physics engine is doing things when things collide. For instance, when the Player collides with an enemy you might want to deal damage to the player. Here's the way to achieve that with this library:
+
+
+```lua
+-- in Player.lua
+function Player:new()
+  self.collider = world:newRectangleCollider(...)
+  self.collider:setCollisionClass('Player')
+  self.collider:setObject(self)
+end
+
+-- in Enemy.lua
+function Enemy:new()
+  self.collider = world:newRectangleCollider(...)
+  self.collider:setCollisionClass('Enemy')
+  self.collider:setObject(self)
+end
+```
+
+First we define in the constructor of both classes the collider that should be attached to them. We set their collision classes (Player and Enemy) and then link the object to the colliders with `setObject`. With this, we can capture collision events between both and then do whatever we wish when a collision happens:
+
+```lua
+-- in Player.lua
+function Player:update(dt)
+  if self.collider:enter('Enemy') then
+    local collision_data = self.collider:getEnterCollisionData('Enemy')
+    local enemy = collision_data.collider:getObject()
+    -- Kills the enemy on hit but also take damage
+    enemy:die()
+    self:takeDamage(10)
+  end
+end
+```
+
+<br>
+
+## One-way Platforms
+
+A common problem people have with using 2D physics engines seems to be getting one-way platforms to work. Here's one way to achieve this with this library:
+
+```lua
+function love.load()
+  world = wf.newWorld(0, 512, true)
+  world:addCollisionClass('Platform')
+  world:addCollisionClass('Player')
+  
+  ground = world:newRectangleCollider(100, 500, 600, 50)
+  ground:setType('static')
+  platform = world:newRectangleCollider(350, 400, 100, 20)
+  platform:setType('static')
+  platform:setCollisionClass('Platform')
+  player = world:newRectangleCollider(390, 450, 20, 40)
+  player:setCollisionClass('Player')
+  
+  player:setPreSolve(function(collider_1, collider_2, contact)        
+    if collider_1.collision_class == 'Player' and collider_2.collision_class == 'Platform' then
+      local px, py = collider_1:getPosition()            
+      local pw, ph = 20, 40            
+      local tx, ty = collider_2:getPosition() 
+      local tw, th = 100, 20
+      if py + ph/2 > ty - th/2 then contact:setEnabled(false) end
+    end   
+  end)
+end
+
+function love.keypressed(key)
+  if key == 'space' then
+    player:applyLinearImpulse(0, -1000)
+  end
+end
+```
+
+And that looks like this:
+
+<p align="center">
+  <img src="http://i.imgur.com/ouwxVRH.gif"/>
+</p>
+
+The way this works is that by disabling the contact before collision response is applied (so in the preSolve callback) we can make a collider ignore another. And then all we do is check to see if the player is below platform, and if he is then we disable the contact.
 
 <br>
 
