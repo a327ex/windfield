@@ -11,7 +11,7 @@
    * [Query the world](#query-the-world)
 * [Examples & Tips](#examples-tips)
    * [Checking collisions between game objects](#checking-collisions-between-game-objects)
-   * [One-way Platforms](#oneway-platforms)
+   * [One-way Platforms](#one-way-platforms)
 * [Documentation](#documentation)
    * [World](#world)
       * [newWorld](#newworldxg-yg-sleep)
