@@ -2,28 +2,15 @@ wf = require 'windfield'
 
 function createSimulation()
     world = wf.newWorld(0, 0, true)
-    world:setGravity(0, 400)
-    world:addCollisionClass('Box')
-    world:addCollisionClass('Solid')
+    world:setQueryDebugDrawing(true)
 
     colliders = {}
-    for i = 1, 50 do
-        local collider = world:newRectangleCollider(love.math.random(0, 800), 0, 25, 25)
-        collider:setCollisionClass('Box')
-        collider:setRestitution(0.8)
-        table.insert(colliders, collider)
-    end
-
-    ground = world:newRectangleCollider(0, 550, 800, 50)
-    ground:setCollisionClass('Solid')
-    ground:setType('static')
+    for i = 1, 200 do table.insert(colliders, world:newRectangleCollider(love.math.random(0, 800), love.math.random(0, 600), 25, 25)) end
 end
 
 function destroySimulation()
     world:destroy()
-    ground = nil
     colliders = nil
-    joint = nil
     world = nil
 end
 
@@ -32,37 +19,21 @@ function love.load()
 end
 
 function love.update(dt)
-    if world then
-        world:update(dt)
-
-        for _, collider in ipairs(colliders) do
-            if collider:enter('Solid') then
-                local collision_data = collider:getEnterCollisionData('Solid')
-                -- print('enter', collision_data.collider, collision_data.contact)
-            end
-
-            if collider:stay('Solid') then
-                local collision_datum = collider:getStayCollisionData('Solid')
-                for _, collision_data in ipairs(collision_datum) do
-                    -- print('stay', collision_data.collider, collision_data.contact)
-                end
-            end
-
-            if collider:exit('Solid') then
-                local collision_data = collider:getEnterCollisionData('Solid')
-                -- print('exit', collision_data.collider, collision_data.contact)
-            end
-        end
-    end
+    if world then world:update(dt) end
 end
 
 function love.draw()
-    if world then
-        world:draw()
-    end
+    if world then world:draw() end
 end
 
 function love.keypressed(key)
+    if key == 'p' then
+        local colliders = world:queryCircleArea(400, 300, 100)
+        for _, collider in ipairs(colliders) do
+            collider:applyLinearImpulse(1000, 1000)
+        end
+    end
+
     if key == 'f1' then
         print("Before collection: " .. collectgarbage("count")/1024)
         collectgarbage()

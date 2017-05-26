@@ -30,7 +30,7 @@ function World.new(wf, xg, yg, sleep)
     local settings = settings or {}
     self.wf = wf
 
-    self.draw_query_for_n_frames = 60
+    self.draw_query_for_n_frames = 10
     self.query_debug_drawing_enabled = false
     self.collision_classes = {}
     self.masks = {}
@@ -103,6 +103,10 @@ function World:draw()
         end
     end
     love.graphics.setColor(255, 255, 255)
+end
+
+function World:setQueryDebugDrawing(value)
+    self.query_debug_drawing_enabled = value
 end
 
 function World:addCollisionClass(collision_class_name, collision_class)
@@ -488,7 +492,7 @@ function World:newChainCollider(vertices, loop, settings)
 end
 
 -- Internal AABB box2d query used before going for more specific and precise computations.
-function World:queryBoundingBox(x1, y1, x2, y2)
+function World:_queryBoundingBox(x1, y1, x2, y2)
     local colliders = {}
     local callback = function(fixture)
         if not fixture:isSensor() then table.insert(colliders, fixture:getUserData()) end
@@ -528,7 +532,7 @@ function World:queryCircleArea(x, y, radius, collision_class_names)
     if not collision_class_names then collision_class_names = {'All'} end
     if self.query_debug_drawing_enabled then table.insert(self.query_debug_draw, {type = 'circle', x = x, y = y, r = radius, frames = self.draw_query_for_n_frames}) end
     
-    local colliders = self:queryBoundingBox(x-radius, y-radius, x+radius, y+radius) 
+    local colliders = self:_queryBoundingBox(x-radius, y-radius, x+radius, y+radius) 
     local outs = {}
     for _, collider in ipairs(colliders) do
         if self:collisionClassInCollisionClassesList(collider.collision_class, collision_class_names) then
@@ -547,7 +551,7 @@ function World:queryRectangleArea(x, y, w, h, collision_class_names)
     if not collision_class_names then collision_class_names = {'All'} end
     if self.query_debug_drawing_enabled then table.insert(self.query_debug_draw, {type = 'rectangle', x = x, y = y, w = w, h = h, frames = self.draw_query_for_n_frames}) end
 
-    local colliders = self:queryBoundingBox(x, y, x+w, y+h) 
+    local colliders = self:_queryBoundingBox(x, y, x+w, y+h) 
     local outs = {}
     for _, collider in ipairs(colliders) do
         if self:collisionClassInCollisionClassesList(collider.collision_class, collision_class_names) then
@@ -572,7 +576,7 @@ function World:queryPolygonArea(vertices, collision_class_names)
         local d = self.wf.Math.line.getLength(cx, cy, vertices[i], vertices[i+1])
         if d > d_max then d_max = d end
     end
-    local colliders = self:queryBoundingBox(cx-d_max, cy-d_max, cx+d_max, cy+d_max)
+    local colliders = self:_queryBoundingBox(cx-d_max, cy-d_max, cx+d_max, cy+d_max)
     local outs = {}
     for _, collider in ipairs(colliders) do
         if self:collisionClassInCollisionClassesList(collider.collision_class, collision_class_names) then
