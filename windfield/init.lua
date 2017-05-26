@@ -32,6 +32,7 @@ function World.new(wf, xg, yg, sleep)
 
     self.draw_query_for_n_frames = 10
     self.query_debug_drawing_enabled = false
+    self.explicit_collision_events = false
     self.collision_classes = {}
     self.masks = {}
     self.is_sensor_memo = {}
@@ -109,25 +110,33 @@ function World:setQueryDebugDrawing(value)
     self.query_debug_drawing_enabled = value
 end
 
+function World:setExplicitCollisionEvents(value)
+    self.explicit_collision_events = value
+end
+
 function World:addCollisionClass(collision_class_name, collision_class)
     if self.collision_classes[collision_class_name] then error('Collision class ' .. collision_class_name .. ' already exists.') end
 
-    self.collision_classes[collision_class_name] = collision_class or {}
-    self.collision_classes[collision_class_name].enter = {}
-    self.collision_classes[collision_class_name].exit = {}
-    self.collision_classes[collision_class_name].pre = {}
-    self.collision_classes[collision_class_name].post = {}
-    for c_class_name, _ in pairs(self.collision_classes) do
-        table.insert(self.collision_classes[collision_class_name].enter, c_class_name)
-        table.insert(self.collision_classes[collision_class_name].exit, c_class_name)
-        table.insert(self.collision_classes[collision_class_name].pre, c_class_name)
-        table.insert(self.collision_classes[collision_class_name].post, c_class_name)
-    end
-    for c_class_name, _ in pairs(self.collision_classes) do
-        table.insert(self.collision_classes[c_class_name].enter, collision_class_name)
-        table.insert(self.collision_classes[c_class_name].exit, collision_class_name)
-        table.insert(self.collision_classes[c_class_name].pre, collision_class_name)
-        table.insert(self.collision_classes[c_class_name].post, collision_class_name)
+    if self.explicit_collision_events then
+        self.collision_classes[collision_class_name] = collision_class or {}
+    else
+        self.collision_classes[collision_class_name] = collision_class or {}
+        self.collision_classes[collision_class_name].enter = {}
+        self.collision_classes[collision_class_name].exit = {}
+        self.collision_classes[collision_class_name].pre = {}
+        self.collision_classes[collision_class_name].post = {}
+        for c_class_name, _ in pairs(self.collision_classes) do
+            table.insert(self.collision_classes[collision_class_name].enter, c_class_name)
+            table.insert(self.collision_classes[collision_class_name].exit, c_class_name)
+            table.insert(self.collision_classes[collision_class_name].pre, c_class_name)
+            table.insert(self.collision_classes[collision_class_name].post, c_class_name)
+        end
+        for c_class_name, _ in pairs(self.collision_classes) do
+            table.insert(self.collision_classes[c_class_name].enter, collision_class_name)
+            table.insert(self.collision_classes[c_class_name].exit, collision_class_name)
+            table.insert(self.collision_classes[c_class_name].pre, collision_class_name)
+            table.insert(self.collision_classes[c_class_name].post, collision_class_name)
+        end
     end
 
     self:collisionClassesSet()
@@ -657,7 +666,7 @@ function Collider.new(world, collider_type, ...)
     self.id = UUID()
     self.world = world
     self.type = collider_type
-    self.user_data = nil
+    self.object = nil
 
     self.shapes = {}
     self.fixtures = {}
@@ -833,8 +842,12 @@ function Collider:setPostSolve(callback)
     self.postSolve = callback
 end
 
-function Collider:setUserData(user_data)
-    self.user_data = user_data
+function Collider:setObject(object)
+    self.object = object 
+end
+
+function Collider:getObject()
+    return self.object
 end
 
 function Collider:addShape(shape_name, shape_type, ...)
@@ -873,7 +886,7 @@ function Collider:destroy()
     self.exit_collision_data = nil
     self:collisionEventsClear()
 
-    self:setUserData(nil)
+    self:setObject(nil)
     for name, _ in pairs(self.fixtures) do
         self.shapes[name] = nil
         self.fixtures[name]:setUserData(nil)
