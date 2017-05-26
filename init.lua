@@ -1,82 +1,68 @@
-local path = ... .. '.' local hx = {} hx.Math = require(path .. 'mlib.mlib') 
+local path = ... .. '.' 
+local wf = {} 
+wf.Math = require(path .. 'mlib.mlib') 
 
---- @class World 
--- @description A World contains the [box2d world](https://www.love2d.org/wiki/World) as well as state for handling collision classes, methods for changing box2d world settings as well as methods for the creation of Colliders and Effectors.  
-local World = {} 
+
+World = {}
 World.__index = World 
 
---- Creates a new World 
--- @luastart 
--- @code physics_world = hx.newWorld({gravity_y = 20})
--- @luaend 
--- @arg {table=} settings - Table with optional settings for the world:
--- @setting {number=0} gravity_x - The world's x gravity component 
--- @setting {number=0} gravity_y - The world's y gravity component
--- @setting {boolean=true} allow_sleeping - If the world's bodies are allowed to sleep
--- @setting {boolean=false} explicit_collision_events - If the collision classes added to this world will automatically generate collision events for all other collision classes they collide with or if this has to be specified manually
--- @setting {number=60} draw_query_for_n_frames - Number of frames a query is drawn for when debugging
--- @settings {boolean=false} debug_drawing_enabled - If debug drawing is enabled (disable for extra performance)
--- @returns {World}
-function hx.newWorld(settings)
-    local world = hx.World.new(hx, settings)
+function wf.newWorld(xg, yg, sleep)
+    local world = wf.World.new(wf, xg, yg, sleep)
 
     world.box2d_world:setCallbacks(world.collisionOnEnter, world.collisionOnExit, world.collisionPre, world.collisionPost)
     world:collisionClear()
     world:addCollisionClass('Default')
 
+    -- Points all box2d_world functions to this wf.World object
+    -- This means that the user can call world:setGravity for instance without having to say world.box2d_world:setGravity
+    for k, v in pairs(world.box2d_world.__index) do 
+        if k ~= '__gc' and k ~= '__eq' and k ~= '__index' and k ~= '__tostring' and k ~= 'update' and k ~= 'destroy' and k ~= 'type' and k ~= 'typeOf' then
+            world[k] = function(self, ...)
+                return v(self.box2d_world, ...)
+            end
+        end
+    end
+
     return world
 end
 
-function World.new(hx, settings)
+function World.new(wf, xg, yg, sleep)
     local self = {}
     local settings = settings or {}
-    self.hx = hx
+    self.wf = wf
 
-    self.explicit_collision_events = settings.explicit_collision_events
-    self.draw_query_for_n_frames = settings.draw_query_for_n_frames or 60
-    self.debug_drawing_enabled = settings.debug_drawing_enabled
+    self.draw_query_for_n_frames = 60
+    self.query_debug_drawing_enabled = false
     self.collision_classes = {}
     self.masks = {}
     self.is_sensor_memo = {}
     self.query_debug_draw = {}
 
     love.physics.setMeter(32)
-    self.box2d_world = love.physics.newWorld(settings.gravity_x or 0, settings.gravity_y or 0, settings.allow_sleeping) 
+    self.box2d_world = love.physics.newWorld(xg, yg, sleep) 
 
     return setmetatable(self, World)
 end
 
---- Updates the World
--- @luastart
--- @code physics_world:update(dt)
--- @luaend
--- @arg {number} dt - Time step delta
 function World:update(dt)
-
     self:collisionEventsClear()
     self.box2d_world:update(dt)
 end
 
---- Draws the World, drawing all colliders, joints and world queries (for debugging purposes)
--- @luastart
--- @code physics_world:draw()
--- @luaend
 function World:draw()
     -- Colliders debug
-    love.graphics.setColor(64, 128, 244)
+    love.graphics.setColor(222, 222, 222)
     local bodies = self.box2d_world:getBodyList()
     for _, body in ipairs(bodies) do
         local fixtures = body:getFixtureList()
         for _, fixture in ipairs(fixtures) do
             if fixture:getShape():type() == 'PolygonShape' then
                 love.graphics.polygon('line', body:getWorldPoints(fixture:getShape():getPoints()))
-
             elseif fixture:getShape():type() == 'EdgeShape' or fixture:getShape():type() == 'ChainShape' then
                 local points = {body:getWorldPoints(fixture:getShape():getPoints())}
                 for i = 1, #points, 2 do
                     if i < #points-2 then love.graphics.line(points[i], points[i+1], points[i+2], points[i+3]) end
                 end
-
             elseif fixture:getShape():type() == 'CircleShape' then
                 local body_x, body_y = body:getPosition()
                 local shape_x, shape_y = fixture:getShape():getPoint()
@@ -88,17 +74,17 @@ function World:draw()
     love.graphics.setColor(255, 255, 255)
 
     -- Joint debug
-    love.graphics.setColor(64, 244, 128)
+    love.graphics.setColor(222, 128, 64)
     local joints = self.box2d_world:getJointList()
     for _, joint in ipairs(joints) do
         local x1, y1, x2, y2 = joint:getAnchors()
-        if x1 and y1 then love.graphics.circle('line', x1, y1, 2) end
-        if x2 and y2 then love.graphics.circle('line', x2, y2, 2) end
+        if x1 and y1 then love.graphics.circle('line', x1, y1, 4) end
+        if x2 and y2 then love.graphics.circle('line', x2, y2, 4) end
     end
     love.graphics.setColor(255, 255, 255)
 
     -- Query debug
-    love.graphics.setColor(244, 128, 64)
+    love.graphics.setColor(64, 64, 222)
     for _, query_draw in ipairs(self.query_debug_draw) do
         query_draw.frames = query_draw.frames - 1
         if query_draw.type == 'circle' then
@@ -120,42 +106,25 @@ function World:draw()
     love.graphics.setColor(255, 255, 255)
 end
 
---- Adds a new collision class to the world. Collision classes are attached to colliders and define collider behavior in terms of which ones will be physically ignored and which ones will generate collision events between each other. All collision classes must be added before any collider is created. If `world.explicit_collision_events` is set to false (the default setting) then `enter`, `exit`, `pre` and `post` settings don't need to be specified (those events will be generated automatically for all existing collision classes).
--- @luastart
--- @code physics_world:addCollisionClass('Player', {
--- @code                                 ignores = {'NPC', 'Enemy'}, 
--- @code                                 enter = {'LevelTransitionArea'}, 
--- @code                                 exit = {'Projectile'}})
--- @luaend
--- @arg {string} collision_class_name - The unique name of the collision class
--- @arg {table} collision_class - The collision class. This table can contain:
--- @setting {table[string]=} ignores - The collision classes that will be physically ignored
--- @setting {table[string]=} enter - The collision classes that will generate collision events when they enter contact 
--- @setting {table[string]=} exit - The collision classes that will generate collision events when they exit contact 
--- @setting {table[string]=} pre - The collision classes that will generate collision events right before collision response is applied 
--- @setting {table[string]=} post - The collision classes that will generate collision events right after collision response is applied
 function World:addCollisionClass(collision_class_name, collision_class)
     if self.collision_classes[collision_class_name] then error('Collision class ' .. collision_class_name .. ' already exists.') end
-    if self.explicit_collision_events then
-        self.collision_classes[collision_class_name] = collision_class or {}
-    else
-        self.collision_classes[collision_class_name] = collision_class or {}
-        self.collision_classes[collision_class_name].enter = {}
-        self.collision_classes[collision_class_name].exit = {}
-        self.collision_classes[collision_class_name].pre = {}
-        self.collision_classes[collision_class_name].post = {}
-        for c_class_name, _ in pairs(self.collision_classes) do
-            table.insert(self.collision_classes[collision_class_name].enter, c_class_name)
-            table.insert(self.collision_classes[collision_class_name].exit, c_class_name)
-            table.insert(self.collision_classes[collision_class_name].pre, c_class_name)
-            table.insert(self.collision_classes[collision_class_name].post, c_class_name)
-        end
-        for c_class_name, _ in pairs(self.collision_classes) do
-            table.insert(self.collision_classes[c_class_name].enter, collision_class_name)
-            table.insert(self.collision_classes[c_class_name].exit, collision_class_name)
-            table.insert(self.collision_classes[c_class_name].pre, collision_class_name)
-            table.insert(self.collision_classes[c_class_name].post, collision_class_name)
-        end
+
+    self.collision_classes[collision_class_name] = collision_class or {}
+    self.collision_classes[collision_class_name].enter = {}
+    self.collision_classes[collision_class_name].exit = {}
+    self.collision_classes[collision_class_name].pre = {}
+    self.collision_classes[collision_class_name].post = {}
+    for c_class_name, _ in pairs(self.collision_classes) do
+        table.insert(self.collision_classes[collision_class_name].enter, c_class_name)
+        table.insert(self.collision_classes[collision_class_name].exit, c_class_name)
+        table.insert(self.collision_classes[collision_class_name].pre, c_class_name)
+        table.insert(self.collision_classes[collision_class_name].post, c_class_name)
+    end
+    for c_class_name, _ in pairs(self.collision_classes) do
+        table.insert(self.collision_classes[c_class_name].enter, collision_class_name)
+        table.insert(self.collision_classes[c_class_name].exit, collision_class_name)
+        table.insert(self.collision_classes[c_class_name].pre, collision_class_name)
+        table.insert(self.collision_classes[c_class_name].post, collision_class_name)
     end
 
     self:collisionClassesSet()
@@ -495,95 +464,28 @@ function World.collisionPost(fixture_a, fixture_b, contact, ni1, ti1, ni2, ti2)
     end
 end
 
---- Creates a new CircleCollider
--- @luastart
--- @code collider = physics_world:newCircleCollider(100, 100, 30)
--- @luaend
--- @arg {number} x - The initial x position of the circle (center)
--- @arg {number} y - The initial y position of the circle (center)
--- @arg {number} r - The radius of the circle
--- @arg {table=} settings - A table with additional and optional settings. This table can contain:
--- @setting {BodyType='dynamic'} body_type - The body type, can be 'static', 'dynamic' or 'kinematic'
--- @setting {string=} collision_class - The collision class of the circle, must be a valid collision class previously added with `addCollisionClass`
--- @returns {Collider}
 function World:newCircleCollider(x, y, r, settings)
-    return self.hx.Collider.new(self, 'Circle', x, y, r, settings)
+    return self.wf.Collider.new(self, 'Circle', x, y, r, settings)
 end
 
---- Creates a new RectangleCollider
--- @luastart
--- @code collider = physics_world:newRectangleCollider(100, 100, 50, 50, {body_type = 'static', collision_class = 'Solid'})
--- @luaend
--- @arg {number} x - The initial x position of the rectangle (left-top)
--- @arg {number} y - The initial y position of the rectangle (left-top)
--- @arg {number} w - The width of the rectangle
--- @arg {number} h - The height of the rectangle
--- @arg {table=} settings - A table with additional and optional settings. This table can contain:
--- @setting {BodyType='dynamic'} body_type - The body type, can be 'static', 'dynamic' or 'kinematic'
--- @setting {string=} collision_class - The collision class of the rectangle, must be a valid collision class previously added with `addCollisionClass`
--- @returns {Collider}
 function World:newRectangleCollider(x, y, w, h, settings)
-    return self.hx.Collider.new(self, 'Rectangle', x, y, w, h, settings)
+    return self.wf.Collider.new(self, 'Rectangle', x, y, w, h, settings)
 end
 
---- Creates a new BSGRectangleCollider (a rectangle with its corners cut (an octagon))
--- @luastart
--- @code collider = physics_world:newBSGRectangleCollider(100, 100, 50, 50, 5)
--- @luaend
--- @arg {number} x - The initial x position of the rectangle (left-top)
--- @arg {number} y - The initial y position of the rectangle (left-top)
--- @arg {number} w - The width of the rectangle
--- @arg {number} h - The height of the rectangle 
--- @arg {number} corner_cut_size - The corner cut size
--- @arg {table=} settings - A table with additional and optional settings. This table can contain:
--- @setting {BodyType='dynamic'} body_type - The body type, can be 'static', 'dynamic' or 'kinematic'
--- @setting {string=} collision_class - The collision class of the rectangle, must be a valid collision class previously added with `addCollisionClass`
--- @returns {Collider}
 function World:newBSGRectangleCollider(x, y, w, h, corner_cut_size, settings)
-    return self.hx.Collider.new(self, 'BSGRectangle', x, y, w, h, corner_cut_size, settings)
+    return self.wf.Collider.new(self, 'BSGRectangle', x, y, w, h, corner_cut_size, settings)
 end
 
---- Creates a new PolygonCollider
--- @luastart
--- @code collider = physics_world:newPolygonCollider({10, 10, 10, 20, 20, 20, 20, 10})
--- @luaend
--- @arg {table[number]} vertices - The polygon vertices as a table of numbers
--- @arg {table=} settings - A table with additional and optional settings. This table can contain:
--- @setting {BodyType='dynamic'} body_type - The body type, can be 'static', 'dynamic' or 'kinematic'
--- @setting {string=} collision_class - The collision class of the polygon, must be a valid collision class previously added with `addCollisionClass`
--- @returns {Collider}
 function World:newPolygonCollider(vertices, settings)
-    return self.hx.Collider.new(self, 'Polygon', vertices, settings)
+    return self.wf.Collider.new(self, 'Polygon', vertices, settings)
 end
 
---- Creates a new LineCollider
--- @luastart
--- @code collider = physics_world:newLineCollider(100, 100, 200, 200, {body_type = 'static'})
--- @luaend
--- @arg {number} x1 - The initial x position of the line
--- @arg {number} y1 - The initial y position of the line
--- @arg {number} x2 - The final x position of the line
--- @arg {number} y2 - The final y position of the line
--- @arg {table=} settings - A table with additional and optional settings. This table can contain:
--- @setting {BodyType='dynamic'} body_type - The body type, can be 'static', 'dynamic' or 'kinematic'
--- @setting {string=} collision_class - The collision class of the line, must be a valid collision class previously added with `addCollisionClass`
--- @returns {Collider}
 function World:newLineCollider(x1, y1, x2, y2, settings)
-    return self.hx.Collider.new(self, 'Line', x1, y1, x2, y2, settings)
+    return self.wf.Collider.new(self, 'Line', x1, y1, x2, y2, settings)
 end
 
---- Creates a new ChainCollider
--- @luastart
--- @code collider = physics_world:newChainCollider({10, 10, 10, 20, 20, 20}, true, {body_type = 'static', collision_class = 'Ground'})
--- @luaend
--- @arg {table[number]} vertices - The chain vertices as a table of numbers
--- @arg {boolean} loop - If the chain should loop back from the last to the first point
--- @arg {table=} settings - A table with additional and optional settings. This table can contain:
--- @setting {BodyType='dynamic'} body_type - The body type, can be 'static', 'dynamic' or 'kinematic'
--- @setting {string=} collision_class - The collision class of the chain, must be a valid collision class previously added with `addCollisionClass`
--- @returns {Collider}
 function World:newChainCollider(vertices, loop, settings)
-    return self.hx.Collider.new(self, 'Chain', vertices, loop, settings)
+    return self.wf.Collider.new(self, 'Chain', vertices, loop, settings)
 end
 
 -- Internal AABB box2d query used before going for more specific and precise computations.
@@ -623,28 +525,16 @@ function World:collisionClassInCollisionClassesList(collision_class, collision_c
     end
 end
 
---- Queries a circular area around a point for colliders
--- @luastart
--- @code colliders_1 = physics_world:queryCircleArea(100, 100, 50, {'Enemy', 'NPC'})
--- @code colliders_2 = physics_world:queryCircleArea(100, 100, 50, {'All', except = {'Player'}})
--- @luaend
--- @arg {number} x - The initial x position of the circle (center)
--- @arg {number} y - The initial y position of the circle (center)
--- @arg {number} r - The radius of the circle
--- @arg {table[string]='All'} collision_class_names - A table of strings with collision class names to be queried. The special value `'All'` (default) can be used to query for all existing collision class names. Another special value (a table of collision class names) `except` can be used to exclude some collision class names when `'All'` is used.
--- @returns {table[Collider]}
 function World:queryCircleArea(x, y, radius, collision_class_names)
     if not collision_class_names then collision_class_names = {'All'} end
-    if self.debug_drawing_enabled then 
-        table.insert(self.query_debug_draw, {type = 'circle', x = x, y = y, r = radius, frames = self.draw_query_for_n_frames}) 
-    end
+    if self.query_debug_drawing_enabled then table.insert(self.query_debug_draw, {type = 'circle', x = x, y = y, r = radius, frames = self.draw_query_for_n_frames}) end
     
     local colliders = self:queryBoundingBox(x-radius, y-radius, x+radius, y+radius) 
     local outs = {}
     for _, collider in ipairs(colliders) do
         if self:collisionClassInCollisionClassesList(collider.collision_class, collision_class_names) then
             for _, fixture in ipairs(collider.body:getFixtureList()) do
-                if self.hx.Math.polygon.getCircleIntersection(x, y, radius, {collider.body:getWorldPoints(fixture:getShape():getPoints())}) then
+                if self.wf.Math.polygon.getCircleIntersection(x, y, radius, {collider.body:getWorldPoints(fixture:getShape():getPoints())}) then
                     table.insert(outs, collider)
                     break
                 end
@@ -654,30 +544,16 @@ function World:queryCircleArea(x, y, radius, collision_class_names)
     return outs
 end
 
---- Queries a rectangular area around a point for colliders
--- @luastart
--- @code -- In both examples x, y are the center of the rectangle, meaning the top-left points on both is 75, 75
--- @code colliders_1 = physics_world:queryRectangleArea(100, 100, 50, 50 {'Enemy', 'NPC'})
--- @code colliders_2 = physics_world:queryRectangleArea(100, 100, 50, 50, {'All', except = {'Player'}})
--- @luaend
--- @arg {number} x - The initial x position of the rectangle (left-top)
--- @arg {number} y - The initial y position of the rectangle (left-top)
--- @arg {number} w - The width of the rectangle
--- @arg {number} h - The height of the rectangle
--- @arg {table[string]='All'} collision_class_names - A table of strings with collision class names to be queried. The special value `'All'` (default) can be used to query for all existing collision class names. Another special value (a table of collision class names) `except` can be used to exclude some collision class names when `'All'` is used.
--- @returns {table[Collider]}
 function World:queryRectangleArea(x, y, w, h, collision_class_names)
     if not collision_class_names then collision_class_names = {'All'} end
-    if self.debug_drawing_enabled then 
-        table.insert(self.query_debug_draw, {type = 'rectangle', x = x, y = y, w = w, h = h, frames = self.draw_query_for_n_frames}) 
-    end
+    if self.query_debug_drawing_enabled then table.insert(self.query_debug_draw, {type = 'rectangle', x = x, y = y, w = w, h = h, frames = self.draw_query_for_n_frames}) end
 
     local colliders = self:queryBoundingBox(x, y, x+w, y+h) 
     local outs = {}
     for _, collider in ipairs(colliders) do
         if self:collisionClassInCollisionClassesList(collider.collision_class, collision_class_names) then
             for _, fixture in ipairs(collider.body:getFixtureList()) do
-                if self.hx.Math.polygon.isPolygonInside({x, y, x+w, y, x+w, y+h, x, y+h}, {collider.body:getWorldPoints(fixture:getShape():getPoints())}) then
+                if self.wf.Math.polygon.isPolygonInside({x, y, x+w, y, x+w, y+h, x, y+h}, {collider.body:getWorldPoints(fixture:getShape():getPoints())}) then
                     table.insert(outs, collider)
                     break
                 end
@@ -687,24 +563,14 @@ function World:queryRectangleArea(x, y, w, h, collision_class_names)
     return outs
 end
 
---- Queries an arbitrary area for colliders
--- @luastart
--- @code colliders = physics_world:queryPolygonArea({10, 10, 20, 10, 20, 20, 10, 20}, {'Enemy'})
--- @code colliders = physics_world:queryPolygonArea({10, 10, 20, 10, 20, 20, 10, 20}, {'All', except = {'Player'}})
--- @luaend
--- @arg {table[number]} vertices - The polygon vertices as a table of numbers
--- @arg {table[string]='All'} collision_class_names - A table of strings with collision class names to be queried. The special value `'All'` (default) can be used to query for all existing collision class names. Another special value (a table of collision class names) `except` can be used to exclude some collision class names when `'All'` is used.
--- @returns {table[Collider]}
 function World:queryPolygonArea(vertices, collision_class_names)
     if not collision_class_names then collision_class_names = {'All'} end
-    if self.debug_drawing_enabled then 
-        table.insert(self.query_debug_draw, {type = 'polygon', vertices = vertices, frames = self.draw_query_for_n_frames}) 
-    end
+    if self.query_debug_drawing_enabled then table.insert(self.query_debug_draw, {type = 'polygon', vertices = vertices, frames = self.draw_query_for_n_frames}) end
 
-    local cx, cy = self.hx.Math.polygon.getCentroid(vertices)
+    local cx, cy = self.wf.Math.polygon.getCentroid(vertices)
     local d_max = 0
     for i = 1, #vertices, 2 do
-        local d = self.hx.Math.line.getLength(cx, cy, vertices[i], vertices[i+1])
+        local d = self.wf.Math.line.getLength(cx, cy, vertices[i], vertices[i+1])
         if d > d_max then d_max = d end
     end
     local colliders = self:queryBoundingBox(cx-d_max, cy-d_max, cx+d_max, cy+d_max)
@@ -712,7 +578,7 @@ function World:queryPolygonArea(vertices, collision_class_names)
     for _, collider in ipairs(colliders) do
         if self:collisionClassInCollisionClassesList(collider.collision_class, collision_class_names) then
             for _, fixture in ipairs(collider.body:getFixtureList()) do
-                if self.hx.Math.polygon.isPolygonInside(vertices, {collider.body:getWorldPoints(fixture:getShape():getPoints())}) then
+                if self.wf.Math.polygon.isPolygonInside(vertices, {collider.body:getWorldPoints(fixture:getShape():getPoints())}) then
                     table.insert(outs, collider)
                     break
                 end
@@ -722,20 +588,9 @@ function World:queryPolygonArea(vertices, collision_class_names)
     return outs
 end
 
---- Queries for colliders that intersect with a line
--- @luastart
--- @code colliders = physics_world:queryLine(100, 100, 200, 200, {'Enemy', 'NPC', 'Projectile'})
--- @code colliders = physics_world:queryLine(100, 100, 200, 200, {'All', except = {'Player'}})
--- @luaend
--- @arg {number} x1 - The initial x position of the line
--- @arg {number} y1 - The initial y position of the line
--- @arg {number} x2 - The final x position of the line
--- @arg {number} y2 - The final y position of the line
--- @arg {table[string]='All'} collision_class_names - A table of strings with collision class names to be queried. The special value `'All'` (default) can be used to query for all existing collision class names. Another special value (a table of collision class names) `except` can be used to exclude some collision class names when `'All'` is used.
--- @returns {table[Collider]}
 function World:queryLine(x1, y1, x2, y2, collision_class_names)
     if not collision_class_names then collision_class_names = {'All'} end
-    if self.debug_drawing_enabled then 
+    if self.query_debug_drawing_enabled then 
         table.insert(self.query_debug_draw, {type = 'line', x1 = x1, y1 = y1, x2 = x2, y2 = y2, frames = self.draw_query_for_n_frames}) 
     end
 
@@ -755,66 +610,77 @@ function World:queryLine(x1, y1, x2, y2, collision_class_names)
     return outs
 end
 
---- Adds a joint to the world.
--- @arg {string} joint_type - The joint type, can be `'DistanceJoint'`, `'FrictionJoint'`, `'GearJoint'`, `'MouseJoint'`, `'PrismaticJoint'`, `'PulleyJoint'`, `'RevoluteJoint'`, `'RopeJoint'`, `'WeldJoint'` or `'WheelJoint'`
--- @arg {*} ... - The joint creation arguments that are different for each joint type. Check [here](https://www.love2d.org/wiki/Joint) for more details
--- @returns {Joint}
 function World:addJoint(joint_type, ...)
     local args = {...}
+    if args[1].body then args[1] = args[1].body end
+    if args[2].body then args[2] = args[2].body end
     local joint = love.physics['new' .. joint_type](unpack(args))
     return joint
 end
 
---- Removes a joint from the world 
--- @arg {Joint} joint - The joint to be removed
 function World:removeJoint(joint)
     joint:destroy()
 end
 
---- Destroys the world and removes all bodies, joints, fixtures and shapes from it
 function World:destroy()
     local bodies = self.box2d_world:getBodyList()
     for _, body in ipairs(bodies) do
         local collider = body:getFixtureList()[1]:getUserData()
         collider:destroy()
     end
+    local joints = self.box2d_world:getJointList()
+    for _, joint in ipairs(joints) do joint:destroy() end
     self.box2d_world:destroy()
     self.box2d_world = nil
 end
 
---- @class Collider 
--- @description A collider is a box2d physics object (body + shape + fixture) that has a collision class and that can generate collision events.
+
+
 local Collider = {}
 Collider.__index = Collider
 
+local generator = love.math.newRandomGenerator(os.time())
+local function UUID()
+    local fn = function(x)
+        local r = generator:random(16) - 1
+        r = (x == "x") and (r + 1) or (r % 4) + 9
+        return ("0123456789abcdef"):sub(r, r)
+    end
+    return (("xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx"):gsub("[xy]", fn))
+end
+
 function Collider.new(world, collider_type, ...)
     local self = {}
+    self.id = UUID()
     self.world = world
     self.type = collider_type
+    self.user_data = nil
+
     self.shapes = {}
     self.fixtures = {}
     self.sensors = {}
+
     self.collision_events = {}
-    self.user_data = nil
+    self.collision_stay = {}
+    self.enter_collision_data = {}
+    self.exit_collision_data = {}
+    self.stay_collision_data = {}
 
     local args = {...}
     local shape, fixture
     if self.type == 'Circle' then
         self.collision_class = (args[4] and args[4].collision_class) or 'Default'
         self.body = love.physics.newBody(self.world.box2d_world, args[1], args[2], (args[4] and args[4].body_type) or 'dynamic')
-        self.body:setFixedRotation(true)
         shape = love.physics.newCircleShape(args[3])
 
     elseif self.type == 'Rectangle' then
         self.collision_class = (args[5] and args[5].collision_class) or 'Default'
         self.body = love.physics.newBody(self.world.box2d_world, args[1] + args[3]/2, args[2] + args[4]/2, (args[5] and args[5].body_type) or 'dynamic')
-        self.body:setFixedRotation(true)
         shape = love.physics.newRectangleShape(args[3], args[4])
 
     elseif self.type == 'BSGRectangle' then
         self.collision_class = (args[6] and args[6].collision_class) or 'Default'
         self.body = love.physics.newBody(self.world.box2d_world, args[1] + args[3]/2, args[2] + args[4]/2, (args[6] and args[6].body_type) or 'dynamic')
-        self.body:setFixedRotation(true)
         local w, h, s = args[3], args[4], args[5]
         shape = love.physics.newPolygonShape({
             -w/2, -h/2 + s, -w/2 + s, -h/2,
@@ -826,19 +692,16 @@ function Collider.new(world, collider_type, ...)
     elseif self.type == 'Polygon' then
         self.collision_class = (args[2] and args[2].collision_class) or 'Default'
         self.body = love.physics.newBody(self.world.box2d_world, 0, 0, (args[2] and args[2].body_type) or 'dynamic')
-        self.body:setFixedRotation(true)
         shape = love.physics.newPolygonShape(unpack(args[1]))
 
     elseif self.type == 'Line' then
         self.collision_class = (args[5] and args[5].collision_class) or 'Default'
         self.body = love.physics.newBody(self.world.box2d_world, 0, 0, (args[5] and args[5].body_type) or 'dynamic')
-        self.body:setFixedRotation(true)
         shape = love.physics.newEdgeShape(args[1], args[2], args[3], args[4])
 
     elseif self.type == 'Chain' then
         self.collision_class = (args[3] and args[3].collision_class) or 'Default'
         self.body = love.physics.newBody(self.world.box2d_world, 0, 0, (args[3] and args[3].body_type) or 'dynamic')
-        self.body:setFixedRotation(true)
         shape = love.physics.newChainShape(args[1], unpack(args[2]))
     end
 
@@ -856,9 +719,35 @@ function Collider.new(world, collider_type, ...)
     self.shapes['main'] = shape
     self.fixtures['main'] = fixture
     self.sensors['main'] = sensor
+    self.shape = shape
+    self.fixture = fixture
     
     self.preSolve = function() end
     self.postSolve = function() end
+
+    -- Points all body, fixture and shape functions to this wf.Collider object
+    -- This means that the user can call collider:setLinearVelocity for instance without having to say collider.body:setLinearVelocity
+    for k, v in pairs(self.body.__index) do 
+        if k ~= '__gc' and k ~= '__eq' and k ~= '__index' and k ~= '__tostring' and k ~= 'destroy' and k ~= 'type' and k ~= 'typeOf' then
+            self[k] = function(self, ...)
+                return v(self.body, ...)
+            end
+        end
+    end
+    for k, v in pairs(self.fixture.__index) do 
+        if k ~= '__gc' and k ~= '__eq' and k ~= '__index' and k ~= '__tostring' and k ~= 'destroy' and k ~= 'type' and k ~= 'typeOf' then
+            self[k] = function(self, ...)
+                return v(self.fixture, ...)
+            end
+        end
+    end
+    for k, v in pairs(self.shape.__index) do 
+        if k ~= '__gc' and k ~= '__eq' and k ~= '__index' and k ~= '__tostring' and k ~= 'destroy' and k ~= 'type' and k ~= 'typeOf' then
+            self[k] = function(self, ...)
+                return v(self.shape, ...)
+            end
+        end
+    end
 
     return setmetatable(self, Collider)
 end
@@ -870,16 +759,7 @@ function Collider:collisionEventsClear()
     end
 end
 
---- Changes this collider's collision class. The new collision class must be a valid one previously added with `addCollisionClass`
--- @luastart
--- @code physics_world:addCollisionClass('Player', {enter = {'LevelTransitionArea'}})
--- @code physics_world:addCollisionClass('PlayerNOCLIP', {ignores = {'Solid'}, enter = {'LevelTransitionArea'}})
--- @code physics_world:collisionClassesSet()
--- @code collider = physics_world:newRectangleCollider(100, 100, 12, 24, {collision_class = 'Player'})
--- @code collider:changeCollisionClass('PlayerNOCLIP')
--- @luaend
--- @arg {string} collision_class_name - The unique name of the new collision class
-function Collider:changeCollisionClass(collision_class_name)
+function Collider:setCollisionClass(collision_class_name)
     if not self.world.collision_classes[collision_class_name] then error("Collision class " .. collision_class_name .. " doesn't exist.") end
     self.collision_class = collision_class_name
     for _, fixture in pairs(self.fixtures) do
@@ -890,87 +770,70 @@ function Collider:changeCollisionClass(collision_class_name)
     end
 end
 
---- Checks for collision enter events from this collider with another
--- @luastart
--- @code if collider:enter('Enemy') then
--- @code   local _, enemy_collider = collider:enter('Enemy')
--- @code end
--- @luaend
--- @arg {string} other_collision_class_name - The unique name of the target collision class
--- @returns {boolean} If the enter collision event between both collision classes happened on this frame or not
--- @returns {Collider} The target Collider
--- @returns {Contact} The [Contact](https://www.love2d.org/wiki/Contact) object
 function Collider:enter(other_collision_class_name)
     local events = self.collision_events[other_collision_class_name]
     if #events >= 1  then
         for _, e in ipairs(events) do
             if e.collision_type == 'enter' then
-                return true, e.collider_2, e.contact
+                if not self.collision_stay[other_collision_class_name] then self.collision_stay[other_collision_class_name] = {} end
+                table.insert(self.collision_stay[other_collision_class_name], {collider = e.collider_2, contact = e.contact})
+                self.enter_collision_data[other_collision_class_name] = {collider = e.collider_2, contact = e.contact}
+                return true
             end
         end
     end
 end
 
---- Checks for collision exit events from this collider with another
--- @luastart
--- @code if collider:exit('Enemy') then
--- @code   local _, enemy_collider = collider:exit('Enemy')
--- @code end
--- @luaend
--- @arg {string} other_collision_class_name - The unique name of the target collision class
--- @returns {boolean} If the enter collision event between both collision classes happened on this frame or not
--- @returns {Collider} The target Collider
--- @returns {Contact} The [Contact](https://www.love2d.org/wiki/Contact) object
+function Collider:getEnterCollisionData(other_collision_class_name)
+    return self.enter_collision_data[other_collision_class_name]
+end
+
 function Collider:exit(other_collision_class_name)
     local events = self.collision_events[other_collision_class_name]
     if #events >= 1  then
         for _, e in ipairs(events) do
             if e.collision_type == 'exit' then
-                return true, e.collider_2, e.contact
+                if self.collision_stay[other_collision_class_name] then
+                    for i = #self.collision_stay[other_collision_class_name], 1, -1 do
+                        local collision_stay = self.collision_stay[other_collision_class_name][i]
+                        if collision_stay.collider.id == e.collider_2.id then table.remove(self.collision_stay[other_collision_class_name], i) end
+                    end
+                end
+                self.exit_collision_data[other_collision_class_name] = {collider = e.collider_2, contact = e.contact}
+                return true 
             end
         end
     end
 end
 
---- Sets the preSolve callback. Unlike with `:enter` or `:exit` that can be delayed and checked after the physics simulation is done for this frame, 
--- both preSolve and postSolve must be callbacks that are resolved immediately, since they may change how the rest of the simulation plays out on this frame.
--- @luastart
--- @code collider:setPreSolve(function(collider_1, collider_2, contact)
--- @code   contact:setEnabled(false)
--- @code end
--- @luaend
--- @arg {function} callback - The preSolve callback. Receives `collider_1`, `collider_2`, `contact` as arguments
+function Collider:getExitCollisionData(other_collision_class_name)
+    return self.exit_collision_data[other_collision_class_name]
+end
+
+function Collider:stay(other_collision_class_name)
+    if self.collision_stay[other_collision_class_name] then
+        if #self.collision_stay[other_collision_class_name] >= 1 then
+            return true
+        end
+    end
+end
+
+function Collider:getStayCollisionData(other_collision_class_name)
+    return self.collision_stay[other_collision_class_name]
+end
+
 function Collider:setPreSolve(callback)
     self.preSolve = callback
 end
 
---- Sets the postSolve callback. Unlike with `:enter` or `:exit` that can be delayed and checked after the physics simulation is done for this frame, 
--- both preSolve and postSolve must be callbacks that are resolved immediately, since they may change how the rest of the simulation plays out on this frame.
--- @luastart
--- @code collider:setPostSolve(function(collider_1, collider_2, contact, ni1, ti1, ni2, ti2)
--- @code   contact:setEnabled(false)
--- @code end
--- @luaend
--- @arg {function} callback - The postSolve callback. Receives `collider_1`, `collider_2`, `contact`, `normal_impulse1`, `tangent_impulse1`, `normal_impulse2`, `tangent_impulse2` as arguments
 function Collider:setPostSolve(callback)
     self.postSolve = callback
 end
 
---- Sets the collider's user data. This is useful to set to the entity the collider belongs to, so that when a query call is made and colliders are returned you can immediately get the pertinent entity.
--- @luastart
--- @code -- in the constructor of some entity
--- @code self.collider = physics_world:newRectangleCollider(...)
--- @code self.collider:setUserData(self)
--- @luaend
--- @ arg {*} user_data - The user data, can be anything
 function Collider:setUserData(user_data)
     self.user_data = user_data
 end
 
---- Adds a shape to the collider. A shape can be accessed via collider.shapes[shape_name]. A fixture of the same name is also added to attach the shape to the collider body. A fixture can be accessed via collider.fixtures[fixture_name]
--- @arg {string} shape_name - The unique name of the shape
--- @arg {string} shape_type - The shape type, can be `'ChainShape'`, `'CircleShape'`, `'EdgeShape'`, `'PolygonShape'` or `'RectangleShape'`
--- @arg {*} ... - The shape creation arguments that are different for each shape type. Check [here](https://www.love2d.org/wiki/Shape) for more details
 function Collider:addShape(shape_name, shape_type, ...)
     if self.shapes[shape_name] or self.fixtures[shape_name] then error("Shape/fixture " .. shape_name .. " already exists.") end
     local args = {...}
@@ -990,8 +853,6 @@ function Collider:addShape(shape_name, shape_type, ...)
     self.sensors[shape_name] = sensor
 end
 
---- Removes a shape from the collider (also removes the accompanying fixture)
--- @arg {string} shape_name - The unique name of the shape to be removed. Must be a name previously added with `addShape`
 function Collider:removeShape(shape_name)
     if not self.shapes[shape_name] then return end
     self.shapes[shape_name] = nil
@@ -1003,8 +864,12 @@ function Collider:removeShape(shape_name)
     self.sensors[shape_name] = nil
 end
 
---- Destroys the collider and removes it from the world
 function Collider:destroy()
+    self.collision_stay = nil
+    self.enter_collision_data = nil
+    self.exit_collision_data = nil
+    self:collisionEventsClear()
+
     self:setUserData(nil)
     for name, _ in pairs(self.fixtures) do
         self.shapes[name] = nil
@@ -1017,7 +882,7 @@ function Collider:destroy()
     self.body = nil
 end
 
-hx.World = World
-hx.Collider = Collider
+wf.World = World
+wf.Collider = Collider
 
-return hx
+return wf
