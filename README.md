@@ -8,6 +8,8 @@ Place the `windfield` folder inside your project and require it:
 wf = require 'windfield'
 ```
 
+<br>
+
 ### Create a world
 
 A physics world can be created just like in box2d. The world returned by `wf.newWorld` contains all the functions of a [LÖVE physics World](https://love2d.org/wiki/World) as well as additional ones defined by this library.
@@ -22,6 +24,8 @@ function love.update(dt)
     world:update(dt)
 end
 ```
+
+<br>
 
 ### Create colliders
 
@@ -56,6 +60,8 @@ And that looks like this:
   <img src="http://i.imgur.com/ytfhmjc.gif"/>
 </p>
 
+<br>
+
 ### Create joints
 
 Joints are mostly unchanged from how they work normally in box2d:
@@ -80,6 +86,8 @@ And that looks like this:
 <p align="center">
   <img src="http://i.imgur.com/tSqkxJR.gif"/>
 </p>
+
+<br>
 
 ### Create collision classes
 
@@ -113,6 +121,8 @@ And that looks like this:
 
 The box that was set be of the Ghost collision class ignored the ground and went right through it, since the ground is set to be of the Solid collision class.
 
+<br>
+
 ### Capture collision events
 
 Collision events can be captured inside the update function by calling the `enter`, `exit` or `stay` functions of a collider. In the example below, whenever the box collider enters contact with another collider of the Solid collision class it will get pushed to the right:
@@ -132,6 +142,8 @@ And that looks like this:
 <p align="center">
   <img src="http://i.imgur.com/uF1bqKM.gif"/>
 </p>
+
+<br>
 
 ### Query the world
 
@@ -171,6 +183,8 @@ And that looks like this:
 <p align="center">
   <img src="http://i.imgur.com/YVxAiuu.gif"/>
 </p>
+
+<br>
 
 ## Documentation
 
