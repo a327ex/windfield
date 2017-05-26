@@ -1,6 +1,6 @@
 **windfield** is a physics module for LÖVE. It wraps LÖVE's physics API so that using box2d becomes as simple as possible.
 
-## Usage
+# Usage
 
 Place the `windfield` folder inside your project and require it:
 
@@ -10,7 +10,7 @@ wf = require 'windfield'
 
 <br>
 
-### Create a world
+## Create a world
 
 A physics world can be created just like in box2d. The world returned by `wf.newWorld` contains all the functions of a [LÖVE physics World](https://love2d.org/wiki/World) as well as additional ones defined by this library.
 
@@ -27,7 +27,7 @@ end
 
 <br>
 
-### Create colliders
+## Create colliders
 
 A collider is a composition of a single body, fixture and shape. For most use cases whenever box2d is needed a body will only have one fixture/shape attached to it, so it makes sense to work primarily on that level of abstraction. Colliders contain all the functions of a LÖVE physics [Body](https://love2d.org/wiki/Body), [Fixture](https://love2d.org/wiki/Fixture) and [Shape](https://love2d.org/wiki/Shape) as well as additional ones defined by this library:
 
@@ -62,7 +62,7 @@ And that looks like this:
 
 <br>
 
-### Create joints
+## Create joints
 
 Joints are mostly unchanged from how they work normally in box2d:
 
@@ -89,7 +89,7 @@ And that looks like this:
 
 <br>
 
-### Create collision classes
+## Create collision classes
 
 Collision classes are used to make colliders ignore other colliders of certain classes and to capture collision events between colliders. The same concept goes by the name of 'collision layer' or 'collision tag' in other engines. In the example below we add a Solid and Ghost collision class. The Ghost collision class is set to ignore the Solid collision class.
 
@@ -123,7 +123,7 @@ The box that was set be of the Ghost collision class ignored the ground and went
 
 <br>
 
-### Capture collision events
+## Capture collision events
 
 Collision events can be captured inside the update function by calling the `enter`, `exit` or `stay` functions of a collider. In the example below, whenever the box collider enters contact with another collider of the Solid collision class it will get pushed to the right:
 
@@ -145,7 +145,7 @@ And that looks like this:
 
 <br>
 
-### Query the world
+## Query the world
 
 The world can be queried with a few area functions and then all colliders inside that area will be returned. In the example below, the world is queried at position 400, 300 with a circle of radius 100, and then all colliders in that area are pushed to the right and down.
 
@@ -186,8 +186,8 @@ And that looks like this:
 
 <br>
 
-## Documentation
+# Documentation
 
-## LICENSE
+# LICENSE
 
 You can do whatever you want with this. See the [LICENSE](https://github.com/SSYGEA/windfield/blob/master/LICENSE).
