@@ -9,11 +9,13 @@
    * [Create collision classes](#create-collision-classes)
    * [Capture collision events](#capture-collision-events)
    * [Query the world](#query-the-world)
-<br>
+
+
 * [Examples & Tips](#examples-tips)
    * [Checking collisions between game objects](#checking-collisions-between-game-objects)
    * [One-way Platforms](#one-way-platforms)
-<br>
+   
+   
 * [Documentation](#documentation)
    * [World](#world)
       * [newWorld](#newworldxg-yg-sleep)
