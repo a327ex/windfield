@@ -11,10 +11,42 @@
    * [Query the world](#query-the-world)
 * [Documentation](#documentation)
    * [World](#world)
-      * [newWorld](#newworld-xg-yg-sleep)
-   
-    
-
+      * [newWorld](#newworldxg-yg-sleep)
+      * [update](#updatedt)
+      * [draw](#draw)
+      * [destroy](#destroy)
+      * [addCollisionClass](#addcollisionclasscollision_class_name-collision_class)
+      * [newCircleCollider](#newcirclecolliderx-y-r)
+      * [newRectangleCollider](#newrectanglecolliderx-y-w-h)
+      * [newBSGRectangleCollider](#newbsgrectanglecolliderx-y-w-h-corner_cut_size)
+      * [newPolygonCollider](#newpolygoncollidervertices)
+      * [newLineCollider](#newlinecolliderx1-y1-x2-y2)
+      * [newChainCollider](#newchaincollidervertices-loop)
+      * [queryCircleArea](#querycircleareax-y-r-collision_class_name)
+      * [queryRectangleArea](#queryrectangleareax-y-w-h-collision_class_names)
+      * [queryPolygonArea](#querypolygonareavertices-collision_class_names)
+      * [queryLine](#querylinex1-y1-x2-y2-collision_class_names)
+      * [addJoint](#addjointjoint_type)
+      * [removeJoint](#removejointjoint)
+      * [setExplicitCollisionEvents](#setexplicitcollisioneventsvalue)
+      * [setQueryDebugDrawing](#setquerydebugdrawingvalue)
+   * [Collider](#collider)
+      * [destroy](#destroy-1)
+      * [setCollisionClass](#setcollisionclasscollision_class_name)
+      * [enter](#enterother_collision_class_name)
+      * [getEnterCollisionData](#getentercollisiondataother_collision_class_name)
+      * [exit](#exitother_collision_class_name)
+      * [getExitCollisionData](#getexitcollisiondataother_collision_class_name)
+      * [stay](#stayother_collision_class_name)
+      * [getStayCollisionData](#getstaycollisiondataother_collision_class_name)
+      * [setPreSolve](#setpresolvecallback)
+      * [setPostSolve](#setpostsolvecallback)
+      * [addShape](#addshapeshape_name-shape_type)
+      * [removeShape](#removeshapeshape_name)
+      * [setObject](#setobjectobject)
+      * [getObject](#getobject)
+      
+<br>
 
 # Quick Start
 
@@ -267,8 +299,7 @@ world:destroy()
 
 #### `:addCollisionClass(collision_class_name, collision_class)`
 
-Adds a new collision class to the World. Collision classes are attached to Colliders and defined their behaviors in terms of which ones will physically ignore each other and which ones will generate collision events between each other. All collision classes must be added before any Collider is created. If `world:setExplicitCollisionEvents` is set to false (the default setting) then `enter`, `exit`, `pre` and `post` settings don't need to be specified, otherwise they do. See more in [].
-
+Adds a new collision class to the World. Collision classes are attached to Colliders and defined their behaviors in terms of which ones will physically ignore each other and which ones will generate collision events between each other. All collision classes must be added before any Collider is created. If `world:setExplicitCollisionEvents` is set to false (the default setting) then `enter`, `exit`, `pre` and `post` settings don't need to be specified, otherwise they do.
 ```lua
 world:addCollisionClass('Player', {ignores = {'NPC', 'Enemy'}})
 ```
@@ -281,10 +312,10 @@ Arguments:
 Settings:
 
 * `[ignores]` `(table[string])` - The collision classes that will be physically ignored
-* `[enter]` `(table[string])` - The collision classes that generate collision events with this collision class when they enter contact
-* `[exit]` `(table[string])` - The collision classes that generate collision events with this collision class when they exit contact
-* `[pre]` `(table[string])` - The collision classes that generate collision events with collision class right before collision response
-* `[post]` `(table[string])` - The collision classes that generate collision events with this collision class right after collision response
+* `[enter]` `(table[string])` - The collision classes that will generate collision events with the collider of this collision class when they enter contact with each other
+* `[exit]` `(table[string])` - The collision classes that will generate collision events with the collider of this collision class when they exit contact with each other
+* `[pre]` `(table[string])` - The collision classes that will generate collision events with the collider of this collision class right before collision response is applied
+* `[post]` `(table[string])` - The collision classes that will generate collision events with the collider of this collision class right after collision response is applied
 
 ---
 
@@ -533,7 +564,7 @@ Arguments:
 
 #### `:setExplicitCollisionEvents(value)`
 
-Sets collision events to be explicit or not. If explicit, then collision events will only be generated between collision classes when they are specified in [addCollisionClasses](). By default this is set to false, meaning that collision events are generated between all collision classes. The main reason why you might want to set this to true is for performance, since not generating collision events between every collision class will require less computation. This function must be called before any collision class is added to the world.
+Sets collision events to be explicit or not. If explicit, then collision events will only be generated between collision classes when they are specified in `addCollisionClasses`. By default this is set to false, meaning that collision events are generated between all collision classes. The main reason why you might want to set this to true is for performance, since not generating collision events between every collision class will require less computation. This function must be called before any collision class is added to the world.
 
 ```lua
 world:setExplicitCollisionEvents(true)
