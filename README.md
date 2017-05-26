@@ -1,6 +1,12 @@
 **windfield** is a physics module for LÖVE. It wraps LÖVE's physics API so that using box2d becomes as simple as possible.
 
-# Usage
+# Contents
+
+* [Quick Start](#quick-start)
+    * [Create a world](#create-a-world)
+
+
+# Quick Start
 
 Place the `windfield` folder inside your project and require it:
 
