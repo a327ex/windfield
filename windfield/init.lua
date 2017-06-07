@@ -49,9 +49,11 @@ function World:update(dt)
     self.box2d_world:update(dt)
 end
 
-function World:draw()
+function World:draw(alpha)
+    -- alpha value is optional
+    alpha = alpha or 255
     -- Colliders debug
-    love.graphics.setColor(222, 222, 222)
+    love.graphics.setColor(222, 222, 222, alpha)
     local bodies = self.box2d_world:getBodyList()
     for _, body in ipairs(bodies) do
         local fixtures = body:getFixtureList()
@@ -71,20 +73,20 @@ function World:draw()
             end
         end
     end
-    love.graphics.setColor(255, 255, 255)
+    love.graphics.setColor(255, 255, 255, alpha)
 
     -- Joint debug
-    love.graphics.setColor(222, 128, 64)
+    love.graphics.setColor(222, 128, 64, alpha)
     local joints = self.box2d_world:getJointList()
     for _, joint in ipairs(joints) do
         local x1, y1, x2, y2 = joint:getAnchors()
         if x1 and y1 then love.graphics.circle('line', x1, y1, 4) end
         if x2 and y2 then love.graphics.circle('line', x2, y2, 4) end
     end
-    love.graphics.setColor(255, 255, 255)
+    love.graphics.setColor(255, 255, 255, alpha)
 
     -- Query debug
-    love.graphics.setColor(64, 64, 222)
+    love.graphics.setColor(64, 64, 222, alpha)
     for _, query_draw in ipairs(self.query_debug_draw) do
         query_draw.frames = query_draw.frames - 1
         if query_draw.type == 'circle' then
@@ -103,7 +105,7 @@ function World:draw()
             table.remove(self.query_debug_draw, i)
         end
     end
-    love.graphics.setColor(255, 255, 255)
+    love.graphics.setColor(255, 255, 255, alpha)
 end
 
 function World:setQueryDebugDrawing(value)
