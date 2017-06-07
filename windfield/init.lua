@@ -50,6 +50,8 @@ function World:update(dt)
 end
 
 function World:draw(alpha)
+    -- get the current color values to reapply
+    local r, g, b, a = love.graphics.getColor()
     -- alpha value is optional
     alpha = alpha or 255
     -- Colliders debug
@@ -105,7 +107,7 @@ function World:draw(alpha)
             table.remove(self.query_debug_draw, i)
         end
     end
-    love.graphics.setColor(255, 255, 255, alpha)
+    love.graphics.setColor(r, g, b, a)
 end
 
 function World:setQueryDebugDrawing(value)
