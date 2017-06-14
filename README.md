@@ -16,7 +16,7 @@
    * [World](#world)
       * [newWorld](#newworldxg-yg-sleep)
       * [update](#updatedt)
-      * [draw](#draw)
+      * [draw](#drawalpha)
       * [destroy](#destroy)
       * [addCollisionClass](#addcollisionclasscollision_class_name-collision_class)
       * [newCircleCollider](#newcirclecolliderx-y-r)
@@ -366,18 +366,18 @@ Arguments:
 
 ---
 
-#### `:draw(alpha_value)`
+#### `:draw(alpha)`
 
 Draws the world, drawing all colliders, joints and world queries (for debugging purposes).
 
 ```lua
-world:draw() -- default opaque drawing
-world:draw(125) -- semi transparent drawing
+world:draw() -- default drawing
+world:draw(128) -- semi transparent drawing
 ```
 
 Arguments:
 
-* `alpha_value` `(number)` - The optional alpha value to use when drawing, defaults to 255
+* `alpha=255` `(number)` - The optional alpha value to use when drawing, defaults to 255
 
 ---
 
