@@ -366,13 +366,18 @@ Arguments:
 
 ---
 
-#### `:draw()`
+#### `:draw(alpha_value)`
 
 Draws the world, drawing all colliders, joints and world queries (for debugging purposes).
 
 ```lua
-world:draw()
+world:draw() -- default opaque drawing
+world:draw(125) -- semi transparent drawing
 ```
+
+Arguments:
+
+* `alpha_value` `(number)` - The optional alpha value to use when drawing, defaults to 255
 
 ---
 
