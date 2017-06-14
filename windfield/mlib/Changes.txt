@@ -1,10 +1,24 @@
-0.10.1 (working)
+0.11.0
 ====
-Added: 
+Added:
+----
+- mlib.vec2 component
+
+To-Do: 
+----
+- Update README.md
+- Update spec.lua
+- Fix tabbing
+
+0.10.1
+====
+Added:
 ----
 - Point category
 	- point.rotate
 	- point.scale
+	- point.polarToCartesian
+	- point.cartesianToPolar
 
 Changed:
 ----
@@ -13,40 +27,37 @@ Changed:
 To-Do:
 ----
 - Determine if isCompletelyInsideFunctions should return true with tangents.
-- Check argument order for logicality and consistency. 
-- Improve speed.
+- Check argument order for logicality and consistency.
 - Add error checking.
 - Make sure to see if any aliases were missed. (e.g. isSegmentInside)
-- Implement mlib.shapes again(?)
 - Clean up and correct README (add "Home" link, etc.)
-- Implement objects that can be used.
 
 0.10.0
 ====
-Added: 
+Added:
 ----
 
-Changed: 
+Changed:
 ----
 - mlib.line.segment is now mlib.segment.
 - mlib.line.getIntercept has been renamed to mlib.line.getYIntercept
 - mlib.line.getYIntercept now returns the x-coordinate for vertical lines instead of false.
-- mlib.line.getYIntercept now returns the value `isVertical` as the second return value. 
-- mlib.line.getPerpendicularBisector is now mlib.segment.getPerpendicularBisector. 
+- mlib.line.getYIntercept now returns the value `isVertical` as the second return value.
+- mlib.line.getPerpendicularBisector is now mlib.segment.getPerpendicularBisector.
 
-Fixed: 
+Fixed:
 ----
-- mlib.line.getIntersection now should handle vertical slopes better. 
-- mlib.line.getClosestPoint now uses local function checkFuzzy for checking horizontal lines. 
-- Fixed possible bug in mlib.line.getSegmentIntersection and vertical lines. 
-- mlib.segment.getIntersection now uses fuzzy checking for parallel lines. 
+- mlib.line.getIntersection now should handle vertical slopes better.
+- mlib.line.getClosestPoint now uses local function checkFuzzy for checking horizontal lines.
+- Fixed possible bug in mlib.line.getSegmentIntersection and vertical lines.
+- mlib.segment.getIntersection now uses fuzzy checking for parallel lines.
 - mlib.math.round is now much more efficient.
 - Removed some useless code from mlib.polygon.isSegmentInside.
 
 To-Do:
 ----
 - Determine if isCompletelyInsideFunctions should return true with tangents.
-- Check argument order for logicality and consistency. 
+- Check argument order for logicality and consistency.
 - Improve speed.
 - Add error checking.
 - Make sure to see if any aliases were missed. (e.g. isSegmentInside)
@@ -119,7 +130,7 @@ Removed:
 
 To-Do
 ----
-- Make examples file on github (examples/shapes/main.lua, etc.) not just one line. 
+- Make examples file on github (examples/shapes/main.lua, etc.) not just one line.
 - Determine if isCompletelyInsideFunctions should return true with tangents.
 - Make argument order more logical.
 - Make sure to see if any aliases were missed. (e.g. isSegmentInside)
@@ -134,7 +145,7 @@ Changed:
 ----
 - mlib.polygon.getPolygonIntersection now does not create duplicate local table.
 - mlib.line.getPerpendicularSlope now does not create a global variable.
-- mlib.math.getSummation now allows the error to go through instead of returning false if the stop value is not a number. 
+- mlib.math.getSummation now allows the error to go through instead of returning false if the stop value is not a number.
 
 - Changed any instance of the term "userdata" with "input"
 
@@ -156,12 +167,12 @@ Removed:
 
 Changed:
 ----
-- FIX:		mlib.polygon.checkPoint now handles vertices better. 
+- FIX:		mlib.polygon.checkPoint now handles vertices better.
 
 
 To-Do
 ----
-- Add more functions. 
+- Add more functions.
 
 0.9.0
 ====
@@ -205,7 +216,7 @@ Changed:
 	- Easier to type.
 - Moved to semantic numbering.
 - Made any returns strings lower-case.
-- Updated specs for missing functions. 
+- Updated specs for missing functions.
 
 To-Do
 ----
@@ -224,17 +235,17 @@ Removed:
 ----
 - Removed all MLib.Shape:
 	- Was very slow.
-	- Could not define custom callbacks. 
-	- Allow for flexibility. 
+	- Could not define custom callbacks.
+	- Allow for flexibility.
 
 Changed:
 ----
 - Switched MLib.Line.GetIntersection back to the old way
-- MLib.Line.GetSegmentIntersection now returns 4 values if the lines are parallel. 
+- MLib.Line.GetSegmentIntersection now returns 4 values if the lines are parallel.
 
 TODO:
 - Make it so that MLib.Shape objects can use ':' syntax for other functions (i.e. MLib.Line.GetLength for Line objects, etc.)
-- Intuitive error messages. 
+- Intuitive error messages.
 
 
 1.1.0.1
@@ -246,18 +257,18 @@ Removed:
 ----
 
 Changed:
-- MLib.Line.GetIntersection now returns true, instead of two points. 
+- MLib.Line.GetIntersection now returns true, instead of two points.
 
 ----
 
 Fixed:
 ----
-- MLib.Line.GetIntersection now handles vertical lines: returns true if they collide, false otherwise. 
-- MLib.Polygon.LineIntersects now also handles verticals. 
+- MLib.Line.GetIntersection now handles vertical lines: returns true if they collide, false otherwise.
+- MLib.Polygon.LineIntersects now also handles verticals.
 
 TODO:
 - Fix
-	- MLib.Shape Table can't have metatables.  
+	- MLib.Shape Table can't have metatables.
 
 1.1.0.0
 ====
@@ -280,11 +291,11 @@ Changed:
 
 Fixed:
 ----
-- Problems with numberous MLib.Polygon and MLib.Circle problems. 
+- Problems with numberous MLib.Polygon and MLib.Circle problems.
 
 TODO:
 - Fix
-	- MLib.Shape Table can't have metatables.  
+	- MLib.Shape Table can't have metatables.
 
 1.0.0.3
 ====
@@ -315,26 +326,26 @@ Added:
 
 Removed:
 ----
-- Ability to use a direction for Math.GetAngle's 5th argument instead of having a third point. See Fixed for more. 
+- Ability to use a direction for Math.GetAngle's 5th argument instead of having a third point. See Fixed for more.
 
 Changed:
 ----
 - Changed README.md for clarity and consistency.
 - Updated spec.lua
-- See Fixed for more. 
+- See Fixed for more.
 
 Fixed:
 ----
-- Circle.IsSegmentSecant now properly accounts for chords actually being chords, and not secants. 
-- Circle.CircleIntersects now can return 'Colinear' or 'Equal' if the circles have same x and y but different radii (Colinear) or are exactly the same (Equal). 
-- Statistics.GetMode now returns a table with the modes, and the second argument as the number of times they appear. 
-- Math.GetRoot now returns the negative number as a second argument. 
+- Circle.IsSegmentSecant now properly accounts for chords actually being chords, and not secants.
+- Circle.CircleIntersects now can return 'Colinear' or 'Equal' if the circles have same x and y but different radii (Colinear) or are exactly the same (Equal).
+- Statistics.GetMode now returns a table with the modes, and the second argument as the number of times they appear.
+- Math.GetRoot now returns the negative number as a second argument.
 - Math.GetPercentOfChange now works for 0 to 0 (previously false).
-- Math.GetAngle now takes only three points and no direction option. 
-- Typos in Shape.CheckCollisions and Shape.Remove. 
-- Fixed nil problems in Shape.CheckCollisions. 
-- Improved readablility and DRYness of Shape.CheckCollisions. 
-- Bugs in Shape.Remove and Shape.CheckCollisions regarding passing tables as arguments. 
+- Math.GetAngle now takes only three points and no direction option.
+- Typos in Shape.CheckCollisions and Shape.Remove.
+- Fixed nil problems in Shape.CheckCollisions.
+- Improved readablility and DRYness of Shape.CheckCollisions.
+- Bugs in Shape.Remove and Shape.CheckCollisions regarding passing tables as arguments.
 
 TODO:
 - Add:
@@ -353,23 +364,23 @@ Removed:
 
 Changed:
 ----
-- Changes.txt now expanded to include short excertps from all previous commits. 
+- Changes.txt now expanded to include short excertps from all previous commits.
 - Changed release number from 3.0.0 to 1.0.0.1
 - Math.Round now can round to decimal places as the second argument.
-- Commented unnecessary call of Segment.CheckPoint in Polygon.LineIntersects. 
+- Commented unnecessary call of Segment.CheckPoint in Polygon.LineIntersects.
 - Polygon.LineIntersects now returns where the lines intersect.
-	- false if not intersection. 
+	- false if not intersection.
 	- A table with all of the intersections { { px, py } }
-- Same with Polygon.PolygonIntersects, Polygon.CircleIntersects, 
+- Same with Polygon.PolygonIntersects, Polygon.CircleIntersects,
 
 Fixed:
 ----
-- Error with GetSlope being called incorrectly. 
-- README.md Line.GetPerpendicularSlope misdirection. 
-- Same with Line.GetPerpendicularBisector, Line.Segment.GetIntersection, Circle.IsLineSecant, Circle.IsSegmentSecant, Statistics.GetMean, Median, Mode, and Range, and Shape:Remove, and fixed the naming for Shape:CheckCollisions and Shape:Remove. 
+- Error with GetSlope being called incorrectly.
+- README.md Line.GetPerpendicularSlope misdirection.
+- Same with Line.GetPerpendicularBisector, Line.Segment.GetIntersection, Circle.IsLineSecant, Circle.IsSegmentSecant, Statistics.GetMean, Median, Mode, and Range, and Shape:Remove, and fixed the naming for Shape:CheckCollisions and Shape:Remove.
 - Clarified README.md
 - Made util SortWithReferences local.
-- Errors caused by local functions. 
+- Errors caused by local functions.
 
 TODO:
 - Add:
@@ -381,26 +392,26 @@ TODO:
 3.0.0
 -----
 ADDED:
-- Added function GetSignedArea. 
+- Added function GetSignedArea.
 REMOVED:
 - Removed drawing functions.
 - Removed MLib.Line.Functions entirely.
 CHANGED:
 - Changed all the names to CamelCase.
-- Changed module name to MLib. 
-- Changed return order of GetPerpendicualrBisector from Slope, Midpoint to Midpoint, Slope. 
+- Changed module name to MLib.
+- Changed return order of GetPerpendicualrBisector from Slope, Midpoint to Midpoint, Slope.
 - Changed returned string of MLib.circle.isLineSecant to be upper-case.
-- Changed IsPrime to accept only one number at a time. 
-- Changed NewShape's type to Capitals. 
+- Changed IsPrime to accept only one number at a time.
+- Changed NewShape's type to Capitals.
 
 Related to code:
-- Added more accuarate comments. 
-- Made code more DRY. 
+- Added more accuarate comments.
+- Made code more DRY.
 - Made code monkey-patchable and saved space (by declaring all functions as local values then inserted them into a large table.
 
 TODO:
-- Make LineIntersectsPolygon return where intersection occurs. 
-- Ditto with PolygonIntersectsPolygon. 
+- Make LineIntersectsPolygon return where intersection occurs.
+- Ditto with PolygonIntersectsPolygon.
 - Add:
   - Frequency
   - Binomial Probability
@@ -423,9 +434,9 @@ Not as accurately maintained before 2.0.2
 -----
 - Added mlib.shape and various bug fixes.
 
-2.0.0 
+2.0.0
 -----
-- Made mlib.shape and made numberous bug fixes. 
+- Made mlib.shape and made numberous bug fixes.
 
 1.9.4
 -----
@@ -439,7 +450,7 @@ Not as accurately maintained before 2.0.2
 -----
 - Updated to LOVE 0.9.0.
 
-1.9.1 
+1.9.1
 -----
 - Made mlib.line.closestPoint able to take either two points on the slope or the slope and intercept.
 
@@ -447,11 +458,11 @@ Not as accurately maintained before 2.0.2
 -----
 - Added mlib.lineSegmentIntersects (no affiliation with previous one (changed to mlib.line.segment.intersect)) and mlib.line.closestPoint
 
-1.8.3 
+1.8.3
 -----
 - Changed naming mechanism to be more organized.
 
-1.8.2 
+1.8.2
 -----
 - "Fixed" mlib.lineSegmentsIntersect AGAIN!!!!  :x
 
@@ -487,11 +498,11 @@ Not as accurately maintained before 2.0.2
 -----
 - Added mlib.circlesIntersect, mlib.pointOnLineSegment, mlib.linesIntersect, and mlib.lineSegmentsIntersect
 
-1.6.1 
+1.6.1
 -----
 - Employed usage of summations for mlib.getPolygonArea and mlib.getPolygonCentroid and removed area as an argument for mlib.getPolygonCentroid.
 
-1.6.0 
+1.6.0
 -----
 - Added several functions.
 
@@ -524,28 +535,28 @@ Not as accurately maintained before 2.0.2
 - Made functions return faster, functions that previously returned tables now return multiple arguments.
 
 1.2.1
------ 
+-----
 - Localized functions, made tables acceptable as arguments, refined function speed, mlib.get_mode now returns number most repeated as well as how many times.
 
-1.2.0 
+1.2.0
 -----
 - Added mlib.get_angle
 
-1.1.0 
+1.1.0
 -----
 - Added mlib.get_convex_area
 
-1.0.4 
------ 
+1.0.4
+-----
 - Fixed get_mode to handle bimodials.
 
-1.0.3 
+1.0.3
 -----
 - Prime Checker optimized (hopefully final update on this.)
 
-1.0.2 
+1.0.2
 -----
-- Prime checker now works! (At least to 1000. I haven't tested any 
+- Prime checker now works! (At least to 1000. I haven't tested any
 further)
 
 1.0.1
