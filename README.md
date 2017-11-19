@@ -938,4 +938,4 @@ Returns:
 
 # LICENSE
 
-You can do whatever you want with this. See the [LICENSE](https://github.com/SSYGEA/windfield/blob/master/LICENSE).
+You can do whatever you want with this. See the license at the top of the main file.
