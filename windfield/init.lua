@@ -1,3 +1,27 @@
+--[[
+The MIT License (MIT)
+
+Copyright (c) 2018 SSYGEN
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+]]--
+
 local path = ... .. '.' 
 local wf = {} 
 wf.Math = require(path .. 'mlib.mlib') 
@@ -784,7 +808,7 @@ end
 
 function Collider:enter(other_collision_class_name)
     local events = self.collision_events[other_collision_class_name]
-    if #events >= 1  then
+    if events and #events >= 1  then
         for _, e in ipairs(events) do
             if e.collision_type == 'enter' then
                 if not self.collision_stay[other_collision_class_name] then self.collision_stay[other_collision_class_name] = {} end
@@ -802,7 +826,7 @@ end
 
 function Collider:exit(other_collision_class_name)
     local events = self.collision_events[other_collision_class_name]
-    if #events >= 1  then
+    if events and #events >= 1  then
         for _, e in ipairs(events) do
             if e.collision_type == 'exit' then
                 if self.collision_stay[other_collision_class_name] then
