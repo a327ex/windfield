@@ -118,7 +118,7 @@ function World:draw(alpha)
         if query_draw.type == 'circle' then
             love.graphics.circle('line', query_draw.x, query_draw.y, query_draw.r)
         elseif query_draw.type == 'rectangle' then
-            love.graphics.rectangle('line', query_draw.x, query_draw.x, query_draw.w, query_draw.h)
+            love.graphics.rectangle('line', query_draw.x, query_draw.y, query_draw.w, query_draw.h)
         elseif query_draw.type == 'line' then
             love.graphics.line(query_draw.x1, query_draw.y1, query_draw.x2, query_draw.y2)
         elseif query_draw.type == 'polygon' then
@@ -649,7 +649,7 @@ end
 function World:addJoint(joint_type, ...)
     local args = {...}
     if args[1].body then args[1] = args[1].body end
-    if args[2].body then args[2] = args[2].body end
+    if type(args[2]) == "table" and args[2].body then args[2] = args[2].body end
     local joint = love.physics['new' .. joint_type](unpack(args))
     return joint
 end
