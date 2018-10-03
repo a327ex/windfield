@@ -408,7 +408,7 @@ Settings:
 * `[ignores]` `(table[string])` - The collision classes that will be physically ignored
 * `[enter]` `(table[string])` - The collision classes that will generate collision events with the collider of this collision class when they enter contact with each other
 * `[exit]` `(table[string])` - The collision classes that will generate collision events with the collider of this collision class when they exit contact with each other
-* `[pre]` `(table[string])` - The collision classes that will generate collision events with the collider of this collision class right before collision response is applied
+* `[pre]` `(table[string])` - The collision classes that will generate collision events with the collider of this collision class just before collision response is applied
 * `[post]` `(table[string])` - The collision classes that will generate collision events with the collider of this collision class right after collision response is applied
 
 ---
@@ -849,7 +849,7 @@ Returns:
 
 #### `:setPreSolve(callback)`
 
-Sets the preSolve callback. Unlike with `:enter` or `:exit` that can be delayed and checked after the physics simulation is done for this frame, both preSolve and postSolve must be callbacks that are resolved immediately, since they may change how the rest of the simulation plays out on this frame.
+Sets the preSolve callback. Unlike `:enter` or `:exit`, which can be delayed and checked after the physics simulation is done for this frame, both preSolve and postSolve must be callbacks that are resolved immediately, since they may change how the rest of the simulation plays out on this frame.
 
 ```lua
 collider:setPreSolve(function(collider_1, collider_2, contact)
@@ -865,7 +865,7 @@ Arguments:
 
 #### `:setPostSolve(callback)`
 
-Sets the postSolve callback. Unlike with `:enter` or `:exit` that can be delayed and checked after the physics simulation is done for this frame, both preSolve and postSolve must be callbacks that are resolved immediately, since they may change how the rest of the simulation plays out on this frame.
+Sets the postSolve callback. Unlike `:enter` or `:exit`, which can be delayed and checked after the physics simulation is done for this frame, both preSolve and postSolve must be callbacks that are resolved immediately, since they may change how the rest of the simulation plays out on this frame.
 
 ```lua
 collider:setPostSolve(function(collider_1, collider_2, contact, ni1, ti1, ni2, ti2)
@@ -903,7 +903,7 @@ Arguments:
 
 #### `:setObject(object)`
 
-Sets the collider's object. This is useful to set to the object the collider belongs to, so that when a query call is made and colliders are returned you can immediately get the pertinent object.
+Sets the collider's object. This is useful to set the object that the collider belongs to, so that when a query call is made and colliders are returned you can immediately get the pertinent object.
 
 ```lua
 -- in the constructor of some object
@@ -919,7 +919,7 @@ Arguments:
 
 #### `:getObject()`
 
-Gets the object a collider belongs to.
+Gets the object that a collider belongs to.
 
 ```lua
 -- in an update function
