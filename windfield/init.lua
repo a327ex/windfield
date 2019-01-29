@@ -76,10 +76,12 @@ end
 function World:draw(alpha)
     -- get the current color values to reapply
     local r, g, b, a = love.graphics.getColor()
+    local linewidth = love.graphics.getLineWidth()
     -- alpha value is optional
     alpha = alpha or 255
     -- Colliders debug
     love.graphics.setColor(222, 222, 222, alpha)
+    love.graphics.setLineWidth(1)
     local bodies = self.box2d_world:getBodies()
     for _, body in ipairs(bodies) do
         local fixtures = body:getFixtures()
@@ -132,6 +134,7 @@ function World:draw(alpha)
         end
     end
     love.graphics.setColor(r, g, b, a)
+    love.graphics.setLineWidth(linewidth)
 end
 
 function World:setQueryDebugDrawing(value)
