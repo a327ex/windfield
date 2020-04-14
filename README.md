@@ -515,18 +515,18 @@ Returns:
 
 ---
 
-#### `:newChainCollider(vertices, loop)`
+#### `:newChainCollider(loop, vertices)`
 
 Creates a new ChainCollider.
 
 ```lua
-chain = world:newChainCollider({10, 10, 10, 20, 20, 20}, true)
+chain = world:newChainCollider(true, {10, 10, 10, 20, 20, 20} )
 ```
 
 Arguments:
 
-* `vertices` `(table[number])` - The chain vertices as a table of numbers
 * `loop` `(boolean)` - If the chain should loop back from the last to the first point
+* `vertices` `(table[number])` - The chain vertices as a table of number
 
 Returns:
 
